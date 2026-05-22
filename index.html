@@ -1,0 +1,4525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0e10" />
+  <title>Stage Plot Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+/* Stage Plot Generator — styles */
+
+:root {
+  --sp-bg: #0d0e10;
+  --sp-panel: #16181c;
+  --sp-panel2: #1c1f25;
+  --sp-border: #2a2d33;
+  --sp-text: #e8e9ed;
+  --sp-muted: #8a8d96;
+  --sp-subtle: #5a5d65;
+  --sp-input: #1c1f25;
+  --sp-input-border: #2a2d33;
+  --sp-accent: #f59e0b;
+  --sp-shadow: 0 1px 0 rgba(255,255,255,.04), 0 8px 24px rgba(0,0,0,.4);
+}
+
+:root[data-theme="light"] {
+  --sp-bg: #f7f6f3;
+  --sp-panel: #ffffff;
+  --sp-panel2: #efece6;
+  --sp-border: #dcd7cd;
+  --sp-text: #1a1a1a;
+  --sp-muted: #6b6b6b;
+  --sp-subtle: #b8b3aa;
+  --sp-input: #ffffff;
+  --sp-input-border: #d8d3c8;
+  --sp-shadow: 0 1px 0 rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, system-ui,
+               'Helvetica Neue', sans-serif;
+  background: var(--sp-bg);
+  color: var(--sp-text);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'ss01', 'ss02';
+}
+
+#root { min-height: 100%; }
+
+.sp-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--sp-bg);
+  color: var(--sp-text);
+  overflow: hidden;
+}
+
+/* ── TOP BAR ──────────────────────────────────────────────────────────── */
+
+.sp-topbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--sp-border);
+  background: var(--sp-panel);
+  position: sticky; top: 0; z-index: 10;
+}
+
+.sp-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sp-brand-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  position: relative;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.2);
+}
+.sp-brand-mark::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1.5px solid rgba(0,0,0,0.4);
+  border-radius: 2px;
+}
+.sp-brand-name {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--sp-text);
+}
+.sp-brand-sub {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--sp-muted);
+}
+
+.sp-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--sp-panel2);
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid var(--sp-border);
+}
+.sp-tab {
+  position: relative;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 7px 18px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--sp-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+.sp-tab:hover { color: var(--sp-text); }
+.sp-tab.on {
+  background: var(--sp-bg);
+  color: var(--sp-text);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+.sp-tab-bar {
+  position: absolute;
+  bottom: 2px;
+  left: 18px; right: 18px;
+  height: 1.5px;
+  background: var(--sp-accent);
+  border-radius: 1px;
+}
+
+.sp-topbar-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.sp-btn, .sp-btn-ghost, .sp-btn-add {
+  appearance: none;
+  border: 1px solid var(--sp-border);
+  background: var(--sp-panel2);
+  color: var(--sp-text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 7px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.01em;
+}
+.sp-btn:hover { background: var(--sp-input); border-color: var(--sp-subtle); }
+.sp-btn-ghost {
+  background: transparent;
+}
+.sp-btn-ghost:hover {
+  background: var(--sp-panel2);
+}
+.sp-btn-ghost.on {
+  background: var(--sp-accent);
+  border-color: var(--sp-accent);
+  color: rgba(0, 0, 0, 0.85);
+}
+.sp-btn-ghost.on:hover {
+  background: var(--sp-accent);
+  filter: brightness(1.05);
+}
+.sp-btn-primary {
+  font-weight: 600;
+  border-color: transparent;
+}
+.sp-btn-primary:hover { filter: brightness(1.08); }
+
+/* ── MAIN LAYOUT ─────────────────────────────────────────────────────── */
+
+.sp-main {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.sp-main.collapsed {
+  grid-template-columns: 1fr;
+}
+
+/* ── FORM PANEL ──────────────────────────────────────────────────────── */
+
+.sp-form-panel {
+  border-right: 1px solid var(--sp-border);
+  background: var(--sp-panel);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.sp-form-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 18px 60px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sp-subtle) transparent;
+}
+.sp-form-scroll::-webkit-scrollbar { width: 6px; }
+.sp-form-scroll::-webkit-scrollbar-thumb {
+  background: var(--sp-subtle);
+  border-radius: 3px;
+}
+
+.sp-form-section { margin-bottom: 24px; }
+.sp-form-h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--sp-border);
+}
+.sp-form-h h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  flex: 1;
+}
+.sp-form-num {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sp-accent);
+  letter-spacing: 0.1em;
+}
+.sp-count {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--sp-muted);
+  font-weight: 400;
+  margin-left: 6px;
+}
+.sp-btn-add {
+  padding: 4px 10px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.sp-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.sp-field { display: flex; flex-direction: column; gap: 5px; }
+.sp-field-lbl {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--sp-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  gap: 6px;
+}
+.sp-field-lbl > span:first-child { overflow: hidden; text-overflow: ellipsis; }
+.sp-field-hint {
+  font-size: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--sp-subtle);
+}
+
+.sp-input {
+  appearance: none;
+  border: 1px solid var(--sp-input-border);
+  background: var(--sp-input);
+  color: var(--sp-text);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.12s;
+}
+.sp-input:focus {
+  border-color: var(--sp-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sp-accent) 18%, transparent);
+}
+.sp-textarea { resize: vertical; min-height: 60px; font-family: inherit; }
+.sp-span-2 { grid-column: 1 / -1; }
+
+/* ── MUSICIAN ROWS ───────────────────────────────────────────────────── */
+
+.sp-mus-list { display: flex; flex-direction: column; gap: 10px; }
+
+.sp-mus-row {
+  border: 1px solid var(--sp-border);
+  background: var(--sp-panel2);
+  border-radius: 8px;
+  padding: 10px 10px 12px;
+}
+
+.sp-mus-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.sp-mus-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(0,0,0,0.78);
+  flex-shrink: 0;
+}
+.sp-mus-name { flex: 1; }
+.sp-btn-x {
+  width: 24px; height: 24px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--sp-muted);
+  background: transparent;
+  border: 1px solid transparent;
+}
+.sp-btn-x:hover {
+  background: var(--sp-input);
+  border-color: var(--sp-border);
+  color: var(--sp-text);
+}
+
+.sp-mus-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.6fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.sp-chips {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.sp-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--sp-input-border);
+  background: var(--sp-input);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--sp-muted);
+  cursor: pointer;
+  user-select: none;
+  letter-spacing: 0.02em;
+}
+.sp-chip input { display: none; }
+.sp-chip:hover { color: var(--sp-text); }
+.sp-chip.on {
+  background: var(--sp-accent);
+  border-color: var(--sp-accent);
+  color: rgba(0,0,0,0.85);
+}
+
+.sp-toggle-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--sp-input-border);
+  background: var(--sp-input);
+  border-radius: 6px;
+  cursor: pointer;
+  grid-column: span 1;
+}
+.sp-toggle-row input { margin-top: 3px; accent-color: var(--sp-accent); }
+.sp-toggle-row.on {
+  border-color: var(--sp-accent);
+  background: color-mix(in srgb, var(--sp-accent) 8%, var(--sp-input));
+}
+.sp-toggle-h { font-size: 12px; font-weight: 500; }
+.sp-toggle-sub {
+  font-size: 10.5px;
+  color: var(--sp-muted);
+  margin-top: 2px;
+}
+
+/* ── CANVAS PANEL ────────────────────────────────────────────────────── */
+
+.sp-canvas-panel {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: var(--sp-bg);
+  min-height: 0;
+  min-width: 0;
+}
+
+.sp-canvas-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 24px 28px 18px;
+  gap: 30px;
+  border-bottom: 1px solid var(--sp-border);
+}
+.sp-canvas-head-l {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+.sp-header-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  object-fit: contain;
+  background: var(--sp-panel2);
+  padding: 4px;
+  border: 1px solid var(--sp-border);
+  flex-shrink: 0;
+}
+.sp-canvas-eyebrow {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  margin-bottom: 6px;
+}
+.sp-canvas-band {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  text-wrap: balance;
+}
+.sp-canvas-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--sp-muted);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.02em;
+  flex-wrap: wrap;
+}
+.sp-canvas-head-r {
+  display: flex;
+  gap: 20px;
+  flex-shrink: 0;
+}
+.sp-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 8px 14px;
+  border-left: 1px solid var(--sp-border);
+}
+.sp-stat-num {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.sp-stat-lbl {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sp-muted);
+  margin-top: 4px;
+}
+
+.sp-canvas-frame {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 28px;
+  min-height: 0;
+}
+.sp-canvas-inner {
+  width: 100%;
+  max-width: 1100px;
+  transform-origin: top center;
+}
+.sp-stage-wrap {
+  width: 100%;
+  background: var(--sp-bg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.sp-stage {
+  width: 100%;
+  height: auto;
+  display: block;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.sp-stage .sp-draggable [style*="grab"]:active { cursor: grabbing !important; }
+
+.sp-canvas-foot {
+  padding: 18px 28px 32px;
+  border-top: 1px solid var(--sp-border);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.sp-legend {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px 16px;
+  color: var(--sp-muted);
+  align-content: start;
+}
+.sp-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--sp-text);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.02em;
+}
+.sp-legend-item svg { color: var(--sp-muted); flex-shrink: 0; }
+
+.sp-notes {
+  border-left: 2px solid var(--sp-accent);
+  padding: 4px 0 4px 14px;
+}
+.sp-notes-h {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--sp-accent);
+  margin-bottom: 6px;
+}
+.sp-notes-body {
+  font-size: 12.5px;
+  color: var(--sp-text);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+/* ── INPUT LIST ──────────────────────────────────────────────────────── */
+
+.sp-il { padding: 28px 32px 60px; max-width: 1100px; margin: 0 auto; width: 100%; }
+
+.sp-il-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-bottom: 18px;
+  border-bottom: 2px solid var(--sp-text);
+  margin-bottom: 18px;
+}
+.sp-il-eyebrow {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--sp-muted);
+  margin-bottom: 6px;
+}
+.sp-il-title {
+  margin: 0;
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+.sp-il-meta {
+  margin-top: 8px;
+  color: var(--sp-muted);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+.sp-il-totals {
+  display: flex;
+  gap: 24px;
+}
+.sp-il-totals-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.sp-il-totals-num {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.sp-il-totals-lbl {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sp-muted);
+  margin-top: 4px;
+}
+
+.sp-il-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.sp-il-table th {
+  text-align: left;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--sp-muted);
+  font-weight: 600;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--sp-border);
+}
+.sp-il-table td {
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--sp-border);
+  vertical-align: middle;
+}
+.sp-il-table tr:hover td {
+  background: color-mix(in srgb, var(--sp-accent) 5%, transparent);
+}
+.sp-il-ch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1.5px solid;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--sp-text);
+}
+.sp-il-actor { color: var(--sp-muted); }
+
+.sp-il-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 8px 10px;
+  background: var(--sp-panel2);
+  border: 1px solid var(--sp-border);
+  border-radius: 8px;
+}
+.sp-il-toolbar-spacer { flex: 1; }
+
+.sp-il-table-editable td {
+  padding: 4px 6px;
+}
+.sp-il-input {
+  appearance: none;
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--sp-text);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 5px 7px;
+  border-radius: 5px;
+  outline: none;
+  transition: background 0.1s, border-color 0.1s;
+}
+.sp-il-input:hover {
+  background: color-mix(in srgb, var(--sp-accent) 5%, var(--sp-panel2));
+}
+.sp-il-input:focus {
+  background: var(--sp-input);
+  border-color: var(--sp-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sp-accent) 18%, transparent);
+}
+.sp-il-ch-input {
+  width: 44px;
+  text-align: center;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  border: 1.5px solid currentColor;
+  border-radius: 4px;
+  padding: 3px 4px;
+  font-size: 11px;
+  -moz-appearance: textfield;
+}
+.sp-il-ch-input::-webkit-inner-spin-button,
+.sp-il-ch-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.sp-il-src { font-weight: 600; }
+.sp-il-mic, .sp-il-note {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+}
+.sp-il-stand {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--sp-muted);
+  text-transform: lowercase;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'><path fill='%238a8d96' d='M0 0h8L4 5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 22px;
+}
+.sp-il-actor {
+  color: var(--sp-text);
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'><path fill='%238a8d96' d='M0 0h8L4 5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 22px;
+}
+.sp-il-actor:not(:focus) { color: var(--sp-muted); }
+.sp-il-handle {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.sp-il-arr {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--sp-subtle);
+  font-size: 8px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.sp-il-arr:hover:not(:disabled) {
+  background: var(--sp-panel2);
+  color: var(--sp-text);
+}
+.sp-il-arr:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.sp-il-empty {
+  text-align: center;
+  padding: 40px 20px !important;
+  color: var(--sp-muted);
+  font-style: italic;
+}
+
+.sp-bl-item-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sp-bl-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.2);
+}
+.sp-bl-owner {
+  text-transform: none !important;
+  font-weight: 600;
+}
+.sp-bl-owner-band   { color: #06d6a0; }
+.sp-bl-owner-house  { color: #6c8cff; }
+.sp-bl-owner-venue  { color: #ffd166; }
+.sp-bl-owner-rented { color: #ef476f; }
+
+.sp-il-table-editable tr:hover td { background: transparent; }
+
+.sp-il-table-editable td { vertical-align: middle; }
+
+.sp-il-foot {
+  margin-top: 30px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--sp-border);
+}
+.sp-il-sum-h {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--sp-muted);
+  margin-bottom: 10px;
+}
+.sp-il-sum-grid {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.sp-il-sum-cell {
+  display: flex;
+  flex-direction: column;
+}
+.sp-il-sum-num {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+.sp-il-sum-lbl {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sp-muted);
+  margin-top: 2px;
+}
+.sp-il-sum-text {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--sp-text);
+}
+.sp-il-sum-muted { color: var(--sp-muted); margin-top: 2px; }
+
+/* Sublists: AC drops, risers */
+.sp-sublist {
+  margin-top: 14px;
+  padding: 12px;
+  background: var(--sp-panel2);
+  border: 1px solid var(--sp-border);
+  border-radius: 8px;
+}
+.sp-sublist-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--sp-muted);
+  margin-bottom: 8px;
+}
+.sp-sublist-actions { display: flex; gap: 6px; }
+.sp-btn-tiny {
+  padding: 3px 8px;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+}
+.sp-sublist-hint {
+  font-size: 10.5px;
+  color: var(--sp-subtle);
+  margin-bottom: 10px;
+  font-style: italic;
+}
+.sp-pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.sp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 4px 4px 8px;
+  background: var(--sp-input);
+  border: 1px solid var(--sp-input-border);
+  border-radius: 999px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+.sp-pill-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #fbbf24;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.2);
+}
+.sp-pill-label { font-weight: 600; color: var(--sp-text); }
+.sp-pill-coord { color: var(--sp-muted); font-size: 10px; }
+.sp-pill-x {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--sp-muted);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.sp-pill-x:hover {
+  background: var(--sp-border);
+  color: var(--sp-text);
+}
+.sp-riser-list { display: flex; flex-direction: column; gap: 8px; }
+.sp-riser-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  background: var(--sp-input);
+  border: 1px solid var(--sp-input-border);
+  border-radius: 6px;
+}
+.sp-riser-label { flex: 1; min-width: 0; font-size: 12px; }
+.sp-riser-dims {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.sp-riser-dims label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9px;
+  color: var(--sp-muted);
+  letter-spacing: 0.06em;
+}
+.sp-riser-dims label span { margin-bottom: 2px; }
+.sp-riser-dims input {
+  width: 48px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  padding: 4px 2px;
+  font-size: 11px;
+}
+
+/* Logo upload row */
+.sp-logo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: var(--sp-panel2);
+  border: 1px dashed var(--sp-input-border);
+  border-radius: 8px;
+  margin-top: 4px;
+}
+.sp-logo-preview {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  background: var(--sp-input);
+  border: 1px solid var(--sp-input-border);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.sp-logo-preview img { width: 100%; height: 100%; object-fit: contain; }
+.sp-logo-preview span {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--sp-subtle);
+  font-weight: 700;
+}
+.sp-logo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+.sp-btn-upload { cursor: pointer; }
+.sp-logo-hint {
+  flex-basis: 100%;
+  font-size: 10.5px;
+  color: var(--sp-muted);
+  margin-top: 2px;
+}
+
+/* Mobile-only close button inside form panel — hidden on desktop */
+.sp-form-mobile-close { display: none; }
+.sp-form-backdrop { display: none; }
+
+/* ── PRINT ───────────────────────────────────────────────────────────── */
+
+@media print {
+  :root { --sp-bg: #ffffff; --sp-panel: #ffffff; --sp-text: #000; }
+  .sp-topbar, .sp-form-panel, .twk-panel { display: none !important; }
+  .sp-main { grid-template-columns: 1fr !important; }
+  .sp-canvas-panel { overflow: visible !important; }
+  .sp-canvas-head { padding: 12px 20px !important; }
+  .sp-canvas-frame { padding: 8px 20px !important; }
+  .sp-canvas-foot { padding: 12px 20px !important; }
+  body { background: #fff !important; color: #000 !important; }
+  @page { margin: 12mm; size: landscape; }
+}
+
+/* ── MOBILE ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .sp-main {
+    grid-template-columns: 1fr !important;
+    position: relative;
+  }
+
+  /* Form panel becomes an overlay drawer */
+  .sp-form-panel {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 92%;
+    max-width: 380px;
+    z-index: 50;
+    box-shadow: 4px 0 32px rgba(0, 0, 0, 0.5);
+    border-right: 1px solid var(--sp-border);
+  }
+  .sp-form-backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 49;
+  }
+  .sp-form-mobile-close {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 10px 0;
+  }
+  .sp-form-mobile-close .sp-btn-ghost {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  /* Topbar — two rows: brand + actions, then tabs */
+  .sp-topbar {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "brand actions"
+      "tabs tabs";
+    padding: 8px 10px;
+    row-gap: 6px;
+    column-gap: 8px;
+  }
+  .sp-brand { grid-area: brand; }
+  .sp-tabs {
+    grid-area: tabs;
+    justify-self: stretch;
+    padding: 3px;
+  }
+  .sp-tab {
+    padding: 5px 10px;
+    font-size: 11px;
+    flex: 1;
+    text-align: center;
+  }
+  .sp-tab-bar { left: 8px; right: 8px; }
+  .sp-topbar-actions {
+    grid-area: actions;
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+  .sp-brand-sub { display: none; }
+  .sp-brand-name { font-size: 11px; }
+  .sp-brand-mark { width: 22px; height: 22px; }
+  .sp-btn, .sp-btn-ghost {
+    padding: 6px 8px;
+    font-size: 11px;
+    gap: 4px;
+  }
+  /* Hide "Form" toggle button text — first ghost button in topbar-actions */
+  .sp-topbar-actions .sp-btn-ghost:first-child {
+    min-width: 36px;
+    padding: 6px;
+  }
+
+  /* Canvas head stacks */
+  .sp-canvas-head {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px 14px 12px;
+    gap: 14px;
+  }
+  .sp-canvas-head-l { gap: 12px; width: 100%; }
+  .sp-canvas-band { font-size: 22px; }
+  .sp-canvas-meta { font-size: 11px; gap: 4px; }
+  .sp-canvas-head-r {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 0;
+  }
+  .sp-stat {
+    flex: 1;
+    align-items: center;
+    padding: 6px 8px;
+    border-left: 1px solid var(--sp-border);
+  }
+  .sp-stat:first-child { border-left: 0; padding-left: 0; }
+  .sp-stat-num { font-size: 22px; }
+
+  .sp-canvas-frame { padding: 12px 8px; }
+  .sp-canvas-foot {
+    grid-template-columns: 1fr;
+    padding: 12px 14px 28px;
+    gap: 14px;
+  }
+  .sp-legend { grid-template-columns: repeat(2, 1fr); gap: 6px 12px; }
+  .sp-header-logo { width: 44px; height: 44px; }
+
+  /* Form grids collapse to 1 col */
+  .sp-grid-2 { grid-template-columns: 1fr; }
+  .sp-mus-grid { grid-template-columns: 1fr 1fr; }
+  .sp-mus-grid .sp-field:nth-child(3) { grid-column: span 2; }
+  .sp-form-scroll { padding: 14px 14px 50px; }
+  .sp-form-section { margin-bottom: 18px; }
+
+  /* Riser row gets tighter */
+  .sp-riser-row { flex-wrap: wrap; }
+  .sp-riser-label { flex-basis: 100%; }
+  .sp-riser-dims input { width: 44px; }
+
+  /* Tables (input list + backline) — horizontal scroll on narrow screens */
+  .sp-il { padding: 16px 12px 40px; }
+  .sp-il-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .sp-il-title { font-size: 26px; }
+  .sp-il-totals { gap: 16px; }
+  .sp-il-toolbar { flex-wrap: wrap; gap: 6px; }
+  .sp-il-toolbar-spacer { display: none; }
+
+  .sp-il-table-editable {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    min-width: 0;
+    white-space: nowrap;
+  }
+  .sp-il-table-editable thead,
+  .sp-il-table-editable tbody { display: table; width: max-content; min-width: 100%; }
+  .sp-il-table-editable tr { display: table-row; }
+  .sp-il-table-editable td,
+  .sp-il-table-editable th { display: table-cell; white-space: normal; }
+  .sp-il-input {
+    font-size: 13px; /* prevent iOS auto-zoom on focus */
+  }
+  .sp-il-foot {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding-top: 18px;
+  }
+
+  /* Tweaks panel — fit narrow screens */
+  .twk-panel {
+    width: calc(100vw - 24px) !important;
+    max-width: 320px;
+  }
+}
+
+/* Extra-narrow phones */
+@media (max-width: 420px) {
+  .sp-topbar-actions { gap: 3px; }
+  .sp-btn span, .sp-btn-ghost span:not(.sp-tab-bar) {
+    display: inline; /* keep */
+  }
+  /* Compact PDF/PNG to icon-only */
+  .sp-btn { padding: 6px 7px; }
+  .sp-canvas-band { font-size: 19px; }
+  .sp-il-title { font-size: 22px; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" data-presets="react">
+
+// tweaks-panel.jsx
+// Reusable Tweaks shell + form-control helpers.
+//
+// Owns the host protocol (listens for __activate_edit_mode / __deactivate_edit_mode,
+// posts __edit_mode_available / __edit_mode_set_keys / __edit_mode_dismissed) so
+// individual prototypes don't re-roll it. Ships a consistent set of controls so you
+// don't hand-draw <input type="range">, segmented radios, steppers, etc.
+//
+// Usage (in an HTML file that loads React + Babel):
+//
+//   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+//     "primaryColor": "#D97757",
+//     "palette": ["#D97757", "#29261b", "#f6f4ef"],
+//     "fontSize": 16,
+//     "density": "regular",
+//     "dark": false
+//   }/*EDITMODE-END*/;
+//
+//   function App() {
+//     const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+//     return (
+//       <div style={{ fontSize: t.fontSize, color: t.primaryColor }}>
+//         Hello
+//         <TweaksPanel>
+//           <TweakSection label="Typography" />
+//           <TweakSlider label="Font size" value={t.fontSize} min={10} max={32} unit="px"
+//                        onChange={(v) => setTweak('fontSize', v)} />
+//           <TweakRadio  label="Density" value={t.density}
+//                        options={['compact', 'regular', 'comfy']}
+//                        onChange={(v) => setTweak('density', v)} />
+//           <TweakSection label="Theme" />
+//           <TweakColor  label="Primary" value={t.primaryColor}
+//                        options={['#D97757', '#2A6FDB', '#1F8A5B', '#7A5AE0']}
+//                        onChange={(v) => setTweak('primaryColor', v)} />
+//           <TweakColor  label="Palette" value={t.palette}
+//                        options={[['#D97757', '#29261b', '#f6f4ef'],
+//                                  ['#475569', '#0f172a', '#f1f5f9']]}
+//                        onChange={(v) => setTweak('palette', v)} />
+//           <TweakToggle label="Dark mode" value={t.dark}
+//                        onChange={(v) => setTweak('dark', v)} />
+//         </TweaksPanel>
+//       </div>
+//     );
+//   }
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    transform:scale(var(--dc-inv-zoom,1));transform-origin:bottom right;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-body::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+
+  .twk-field{appearance:none;box-sizing:border-box;width:100%;min-width:0;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;
+    overflow-wrap:anywhere}
+
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+
+  .twk-num{display:flex;align-items:center;box-sizing:border-box;min-width:0;height:26px;padding:0 0 0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6)}
+  .twk-num-lbl{font-weight:500;color:rgba(41,38,27,.6);cursor:ew-resize;
+    user-select:none;padding-right:8px}
+  .twk-num input{flex:1;min-width:0;height:100%;border:0;background:transparent;
+    font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:0 8px 0 0;
+    outline:none;color:inherit;-moz-appearance:textfield}
+  .twk-num input::-webkit-inner-spin-button,.twk-num input::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0}
+  .twk-num-unit{padding-right:8px;color:rgba(41,38,27,.45)}
+
+  .twk-btn{appearance:none;height:26px;padding:0 12px;border:0;border-radius:7px;
+    background:rgba(0,0,0,.78);color:#fff;font:inherit;font-weight:500;cursor:default}
+  .twk-btn:hover{background:rgba(0,0,0,.88)}
+  .twk-btn.secondary{background:rgba(0,0,0,.06);color:inherit}
+  .twk-btn.secondary:hover{background:rgba(0,0,0,.1)}
+
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+  .twk-swatch::-moz-color-swatch{border:0;border-radius:5.5px}
+
+  .twk-chips{display:flex;gap:6px}
+  .twk-chip{position:relative;appearance:none;flex:1;min-width:0;height:46px;
+    padding:0;border:0;border-radius:6px;overflow:hidden;cursor:default;
+    box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.06);
+    transition:transform .12s cubic-bezier(.3,.7,.4,1),box-shadow .12s}
+  .twk-chip:hover{transform:translateY(-1px);
+    box-shadow:0 0 0 .5px rgba(0,0,0,.18),0 4px 10px rgba(0,0,0,.12)}
+  .twk-chip[data-on="1"]{box-shadow:0 0 0 1.5px rgba(0,0,0,.85),
+    0 2px 6px rgba(0,0,0,.15)}
+  .twk-chip>span{position:absolute;top:0;bottom:0;right:0;width:34%;
+    display:flex;flex-direction:column;box-shadow:-1px 0 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i{flex:1;box-shadow:0 -1px 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i:first-child{box-shadow:none}
+  .twk-chip svg{position:absolute;top:6px;left:6px;width:13px;height:13px;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+`;
+
+// ── useTweaks ───────────────────────────────────────────────────────────────
+// Single source of truth for tweak values. setTweak persists via the host
+// (__edit_mode_set_keys → host rewrites the EDITMODE block on disk).
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  // Accepts either setTweak('key', value) or setTweak({ key: value, ... }) so a
+  // useState-style call doesn't write a "[object Object]" key into the persisted
+  // JSON block.
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+    setValues((prev) => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+    // Same-window signal so in-page listeners (deck-stage rail thumbnails)
+    // can react — the parent message only reaches the host, not peers.
+    window.dispatchEvent(new CustomEvent('tweakchange', { detail: edits }));
+  }, []);
+  return [values, setTweak];
+}
+
+// ── TweaksPanel ─────────────────────────────────────────────────────────────
+// Floating shell. Registers the protocol listener BEFORE announcing
+// availability — if the announce ran first, the host's activate could land
+// before our handler exists and the toolbar toggle would silently no-op.
+// The close button posts __edit_mode_dismissed so the host's toolbar toggle
+// flips off in lockstep; the host echoes __deactivate_edit_mode back which
+// is what actually hides the panel.
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const dragCleanupRef = React.useRef(null);
+  const PAD = 16;
+
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', clampToViewport);
+      return () => window.removeEventListener('resize', clampToViewport);
+    }
+    const ro = new ResizeObserver(clampToViewport);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clampToViewport]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  };
+
+  React.useEffect(() => () => { dragCleanupRef.current?.(); }, []);
+
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+      dragCleanupRef.current = null;
+    };
+    dragCleanupRef.current = up;
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel" data-omelette-chrome=""
+           style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" aria-label="Close tweaks"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">
+          {children}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Layout helpers ──────────────────────────────────────────────────────────
+
+function TweakSection({ label, children }) {
+  return (
+    <>
+      <div className="twk-sect">{label}</div>
+      {children}
+    </>
+  );
+}
+
+function TweakRow({ label, value, children, inline = false }) {
+  return (
+    <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
+      <div className="twk-lbl">
+        <span>{label}</span>
+        {value != null && <span className="twk-val">{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Controls ────────────────────────────────────────────────────────────────
+
+function TweakSlider({ label, value, min = 0, max = 100, step = 1, unit = '', onChange }) {
+  return (
+    <TweakRow label={label} value={`${value}${unit}`}>
+      <input type="range" className="twk-slider" min={min} max={max} step={step}
+             value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </TweakRow>
+  );
+}
+
+function TweakToggle({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
+              role="switch" aria-checked={!!value}
+              onClick={() => onChange(!value)}><i /></button>
+    </div>
+  );
+}
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  // The active value is read by pointer-move handlers attached for the lifetime
+  // of a drag — ref it so a stale closure doesn't fire onChange for every move.
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  // Segments wrap mid-word once per-segment width runs out. The track is
+  // ~248px (280 panel − 28 body pad − 4 seg pad), each button loses 12px
+  // to its own padding, and 11.5px system-ui averages ~6.3px/char — so 2
+  // options fit ~16 chars each, 3 fit ~10. Past that (or >3 options), fall
+  // back to a dropdown rather than wrap.
+  const labelLen = (o) => String(typeof o === 'object' ? o.label : o).length;
+  const maxLen = options.reduce((m, o) => Math.max(m, labelLen(o)), 0);
+  const fitsAsSegments = maxLen <= ({ 2: 16, 3: 10 }[options.length] ?? 0);
+  if (!fitsAsSegments) {
+    // <select> emits strings — map back to the original option value so the
+    // fallback stays type-preserving (numbers, booleans) like the segment path.
+    const resolve = (s) => {
+      const m = options.find((o) => String(typeof o === 'object' ? o.value : o) === s);
+      return m === undefined ? s : typeof m === 'object' ? m.value : m;
+    };
+    return <TweakSelect label={label} value={value} options={options}
+                        onChange={(s) => onChange(resolve(s))} />;
+  }
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+
+  const segAt = (clientX) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i = Math.floor(((clientX - r.left - 2) / inner) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => {
+      if (!trackRef.current) return;
+      const v = segAt(ev.clientX);
+      if (v !== valueRef.current) onChange(v);
+    };
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown}
+           className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb"
+             style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+                      width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakSelect({ label, value, options, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <select className="twk-field" value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => {
+          const v = typeof o === 'object' ? o.value : o;
+          const l = typeof o === 'object' ? o.label : o;
+          return <option key={v} value={v}>{l}</option>;
+        })}
+      </select>
+    </TweakRow>
+  );
+}
+
+function TweakText({ label, value, placeholder, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <input className="twk-field" type="text" value={value} placeholder={placeholder}
+             onChange={(e) => onChange(e.target.value)} />
+    </TweakRow>
+  );
+}
+
+function TweakNumber({ label, value, min, max, step = 1, unit = '', onChange }) {
+  const clamp = (n) => {
+    if (min != null && n < min) return min;
+    if (max != null && n > max) return max;
+    return n;
+  };
+  const startRef = React.useRef({ x: 0, val: 0 });
+  const onScrubStart = (e) => {
+    e.preventDefault();
+    startRef.current = { x: e.clientX, val: value };
+    const decimals = (String(step).split('.')[1] || '').length;
+    const move = (ev) => {
+      const dx = ev.clientX - startRef.current.x;
+      const raw = startRef.current.val + dx * step;
+      const snapped = Math.round(raw / step) * step;
+      onChange(clamp(Number(snapped.toFixed(decimals))));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return (
+    <div className="twk-num">
+      <span className="twk-num-lbl" onPointerDown={onScrubStart}>{label}</span>
+      <input type="number" value={value} min={min} max={max} step={step}
+             onChange={(e) => onChange(clamp(Number(e.target.value)))} />
+      {unit && <span className="twk-num-unit">{unit}</span>}
+    </div>
+  );
+}
+
+// Relative-luminance contrast pick — checkmarks drawn over a swatch need to
+// read on both #111 and #fafafa without per-option configuration. Hex input
+// only (#rgb / #rrggbb); named or rgb()/hsl() colors fall through to "light".
+function __twkIsLight(hex) {
+  const h = String(hex).replace('#', '');
+  const x = h.length === 3 ? h.replace(/./g, (c) => c + c) : h.padEnd(6, '0');
+  const n = parseInt(x.slice(0, 6), 16);
+  if (Number.isNaN(n)) return true;
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return r * 299 + g * 587 + b * 114 > 148000;
+}
+
+const __TwkCheck = ({ light }) => (
+  <svg viewBox="0 0 14 14" aria-hidden="true">
+    <path d="M3 7.2 5.8 10 11 4.2" fill="none" strokeWidth="2.2"
+          strokeLinecap="round" strokeLinejoin="round"
+          stroke={light ? 'rgba(0,0,0,.78)' : '#fff'} />
+  </svg>
+);
+
+// TweakColor — curated color/palette picker. Each option is either a single
+// hex string or an array of 1-5 hex strings; the card adapts — a lone color
+// renders solid, a palette renders colors[0] as the hero (left ~2/3) with the
+// rest stacked in a sharp column on the right. onChange emits the
+// option in the shape it was passed (string stays string, array stays array).
+// Without options it falls back to the native color input for back-compat.
+function TweakColor({ label, value, options, onChange }) {
+  if (!options || !options.length) {
+    return (
+      <div className="twk-row twk-row-h">
+        <div className="twk-lbl"><span>{label}</span></div>
+        <input type="color" className="twk-swatch" value={value}
+               onChange={(e) => onChange(e.target.value)} />
+      </div>
+    );
+  }
+  // Native <input type=color> emits lowercase hex per the HTML spec, so
+  // compare case-insensitively. String() guards JSON.stringify(undefined),
+  // which returns the primitive undefined (no .toLowerCase).
+  const key = (o) => String(JSON.stringify(o)).toLowerCase();
+  const cur = key(value);
+  return (
+    <TweakRow label={label}>
+      <div className="twk-chips" role="radiogroup">
+        {options.map((o, i) => {
+          const colors = Array.isArray(o) ? o : [o];
+          const [hero, ...rest] = colors;
+          const sup = rest.slice(0, 4);
+          const on = key(o) === cur;
+          return (
+            <button key={i} type="button" className="twk-chip" role="radio"
+                    aria-checked={on} data-on={on ? '1' : '0'}
+                    aria-label={colors.join(', ')} title={colors.join(' · ')}
+                    style={{ background: hero }}
+                    onClick={() => onChange(o)}>
+              {sup.length > 0 && (
+                <span>
+                  {sup.map((c, j) => <i key={j} style={{ background: c }} />)}
+                </span>
+              )}
+              {on && <__TwkCheck light={__twkIsLight(hero)} />}
+            </button>
+          );
+        })}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakButton({ label, onClick, secondary = false }) {
+  return (
+    <button type="button" className={secondary ? 'twk-btn secondary' : 'twk-btn'}
+            onClick={onClick}>{label}</button>
+  );
+}
+
+Object.assign(window, {
+  useTweaks, TweaksPanel, TweakSection, TweakRow,
+  TweakSlider, TweakToggle, TweakRadio, TweakSelect,
+  TweakText, TweakNumber, TweakColor, TweakButton,
+});
+
+  </script>
+  <script type="text/babel" data-presets="react">
+// constants.jsx — role catalog, mic library, position presets, defaults.
+
+const ROLES = {
+  vocal:   { label: 'Lead Vocal',   color: '#ef476f', short: 'VOX',  inst: 'vocal' },
+  bgv:     { label: 'Backing Vox',  color: '#c77dff', short: 'BGV',  inst: 'vocal' },
+  guitar:  { label: 'Lead Guitar',  color: '#f78c2a', short: 'GTR',  inst: 'guitar' },
+  rguitar: { label: 'Rhythm Guitar',color: '#ffb347', short: 'RGT',  inst: 'guitar' },
+  bass:    { label: 'Bass',         color: '#ffd166', short: 'BAS',  inst: 'bass' },
+  drums:   { label: 'Drums',        color: '#06d6a0', short: 'DRM',  inst: 'drums' },
+  keys:    { label: 'Keys',         color: '#6c8cff', short: 'KEY',  inst: 'keys' },
+  perc:    { label: 'Percussion',   color: '#4ecdc4', short: 'PRC',  inst: 'perc' },
+  horns:   { label: 'Horns',        color: '#f4a261', short: 'HRN',  inst: 'horns' },
+  dj:      { label: 'DJ / Tracks',  color: '#a78bfa', short: 'DJ',   inst: 'keys' },
+};
+
+const ROLE_KEYS = Object.keys(ROLES);
+
+// Festival stage coordinate system: 1000 wide × 600 deep.
+// Audience is at bottom (y = 600), backstage at top (y = 0).
+// Stage Left from performer POV = audience's right (higher x).
+// Positions named from audience POV per industry convention.
+const POSITIONS = {
+  // Downstage (front, near audience)
+  'DSR2': { x:  80, y: 470, label: 'Stage Right 2' },
+  'DSR':  { x: 220, y: 470, label: 'Stage Right' },
+  'DSC':  { x: 500, y: 480, label: 'Down Center' },
+  'DSL':  { x: 780, y: 470, label: 'Stage Left' },
+  'DSL2': { x: 920, y: 470, label: 'Stage Left 2' },
+  // Center stage
+  'CSR':  { x: 220, y: 340, label: 'Center Right' },
+  'CSC':  { x: 500, y: 340, label: 'Center' },
+  'CSL':  { x: 780, y: 340, label: 'Center Left' },
+  // Upstage / riser
+  'USR':  { x: 250, y: 200, label: 'Upstage Right' },
+  'RISER':{ x: 500, y: 180, label: 'Drum Riser' },
+  'USL':  { x: 750, y: 200, label: 'Upstage Left' },
+};
+
+const POSITION_KEYS = Object.keys(POSITIONS);
+
+// Stage size presets. Same viewBox; what changes is the labeled dimensions,
+// drum riser size, and how many position presets feel "natural". Keeping one
+// viewBox keeps icon sizes consistent across presets so the drum kit doesn't
+// shrink when the deck shrinks.
+const STAGE_SIZES = {
+  festival: { label: 'Festival',  deck: "60' \u00d7 36'", riser: "8' \u00d7 8' \u00d7 24\"", riserScale: 1.0 },
+  theater:  { label: 'Theater',   deck: "40' \u00d7 28'", riser: "8' \u00d7 8' \u00d7 16\"", riserScale: 0.85 },
+  club:     { label: 'Club',      deck: "24' \u00d7 16'", riser: 'floor mount',          riserScale: 0.7 },
+};
+
+// Plot views. Each highlights a subset of equipment by dimming the rest.
+const PLOT_TYPES = {
+  full:    { label: 'Full',     emphasize: ['perf', 'mic', 'mon', 'di', 'amp', 'ped', 'pwr'] },
+  monitor: { label: 'Monitors', emphasize: ['perf', 'mon', 'iem'] },
+  foh:     { label: 'FOH',      emphasize: ['perf', 'mic', 'di', 'amp'] },
+};
+
+// Backline generators per role. Returns array of equipment rows.
+function backlineForRole(role, name) {
+  switch (role) {
+    case 'drums': return [
+      { item: 'Drum kit', detail: 'DW Performance 5pc · 22/10/12/16', owner: 'Band', note: 'house cymbals ok' },
+      { item: 'Snare',    detail: 'Ludwig Black Beauty 14×6.5',     owner: 'Band', note: '' },
+      { item: 'Hardware', detail: 'Pearl Eliminator pedals + boom arms', owner: 'Band', note: '' },
+      { item: 'Throne',   detail: 'Roc-N-Soc Manual Spindle',         owner: 'Band', note: '' },
+    ];
+    case 'bass': return [
+      { item: 'Bass amp', detail: 'Ampeg SVT-CL head',                owner: 'Venue', note: 'band brings preamp pedal' },
+      { item: 'Bass cab', detail: 'Ampeg 8×10',                       owner: 'Venue', note: '' },
+    ];
+    case 'guitar': return [
+      { item: 'Guitar amp', detail: 'Fender Twin Reverb ’65 RI',     owner: 'Rented', note: 'on caster board' },
+    ];
+    case 'rguitar': return [
+      { item: 'Guitar amp', detail: 'Vox AC30',                       owner: 'Band',  note: '' },
+    ];
+    case 'keys': return [
+      { item: 'Keyboard',     detail: 'Nord Stage 3 · 88',            owner: 'Band',  note: 'stereo out' },
+      { item: 'Keys stand',   detail: 'K&M Omega 2-tier',             owner: 'Band',  note: '' },
+      { item: 'Sustain pedal',detail: 'Yamaha FC3A',                  owner: 'Band',  note: '' },
+    ];
+    case 'dj': return [
+      { item: 'DJ controller',detail: 'Pioneer DDJ-1000',             owner: 'Band',  note: 'USB-C to laptop' },
+    ];
+    case 'vocal': return [
+      { item: 'Vocal mic',    detail: 'Shure Beta 58A',               owner: 'House', note: 'wired' },
+      { item: 'Mic stand',    detail: 'K&M boom · round base',         owner: 'House', note: '' },
+    ];
+    case 'bgv': return [
+      { item: 'BGV mic',      detail: 'Shure SM58',                   owner: 'House', note: '' },
+      { item: 'Mic stand',    detail: 'K&M boom',                     owner: 'House', note: '' },
+    ];
+    case 'horns': return [
+      { item: 'Horn stand',   detail: 'sax peg + trumpet pegs',       owner: 'Band',  note: '' },
+    ];
+    case 'perc': return [
+      { item: 'Perc rig',     detail: 'congas + bongos + LP tree',    owner: 'Band',  note: '' },
+    ];
+    default: return [];
+  }
+}
+
+// Channel generators per role/instrument. Returns array of channel rows.
+function channelsForRole(role, name) {
+  const n = name || ROLES[role].label;
+  switch (role) {
+    case 'drums': return [
+      { src: 'Kick In',    mic: 'Beta 91A',   note: 'inside kick', actor: n, stand: '—' },
+      { src: 'Kick Out',   mic: 'D6',         note: 'outside',     actor: n, stand: 'short' },
+      { src: 'Snare Top',  mic: 'SM57',       note: '',            actor: n, stand: 'clip' },
+      { src: 'Snare Btm',  mic: 'e604',       note: 'phase rev',   actor: n, stand: 'clip' },
+      { src: 'Hi-Hat',     mic: 'KSM137',     note: '',            actor: n, stand: 'tall' },
+      { src: 'Rack Tom',   mic: 'e604',       note: '',            actor: n, stand: 'clip' },
+      { src: 'Floor Tom',  mic: 'e604',       note: '',            actor: n, stand: 'clip' },
+      { src: 'OH L',       mic: 'KSM32',      note: 'cardioid',    actor: n, stand: 'tall' },
+      { src: 'OH R',       mic: 'KSM32',      note: 'cardioid',    actor: n, stand: 'tall' },
+    ];
+    case 'bass': return [
+      { src: 'Bass DI',    mic: 'DI Active',  note: 'pre-amp tap', actor: n, stand: '—' },
+      { src: 'Bass Mic',   mic: 'RE20',       note: 'on cab',      actor: n, stand: 'short' },
+    ];
+    case 'guitar':
+    case 'rguitar': return [
+      { src: `${ROLES[role].short} Amp`, mic: 'SM57', note: 'edge of cone', actor: n, stand: 'short' },
+    ];
+    case 'keys':
+    case 'dj': return [
+      { src: 'Keys L',     mic: 'DI Active',  note: 'stereo L',    actor: n, stand: '—' },
+      { src: 'Keys R',     mic: 'DI Active',  note: 'stereo R',    actor: n, stand: '—' },
+    ];
+    case 'vocal': return [
+      { src: 'Lead Vocal', mic: 'Beta 58A',   note: 'wireless ok', actor: n, stand: 'tall' },
+    ];
+    case 'bgv': return [
+      { src: 'BGV',        mic: 'SM58',       note: '',            actor: n, stand: 'tall' },
+    ];
+    case 'horns': return [
+      { src: 'Horn',       mic: 'e906',       note: 'on bell',     actor: n, stand: 'clip' },
+    ];
+    case 'perc': return [
+      { src: 'Perc OH L',  mic: 'KSM32',      note: '',            actor: n, stand: 'tall' },
+      { src: 'Perc OH R',  mic: 'KSM32',      note: '',            actor: n, stand: 'tall' },
+    ];
+    default: return [];
+  }
+}
+
+// Default band for first load — 7-piece rock/pop touring act.
+const DEFAULT_SHOW = {
+  band: 'NORTHERN FAULT',
+  show: 'Summer Mainstage Tour',
+  date: '2026-07-18',
+  venue: 'Festival Norte · Mexico City',
+  contact: 'Mara Lozano · Tour Mgr · +52 55 4421 9087',
+  engineer: 'David Pell · FOH / Monitors',
+  power: '4× 20A circuits required · 1× isolated for backline',
+};
+
+const DEFAULT_MUSICIANS = [
+  { id: 'm1', role: 'vocal',   name: 'Iris Vega',     pos: 'DSC',   gear: { wedges: 2, iem: true,  amp: false, pedalboard: false, di: false } },
+  { id: 'm2', role: 'guitar',  name: 'Theo Marín',    pos: 'DSR',   gear: { wedges: 1, iem: false, amp: true,  pedalboard: true,  di: false } },
+  { id: 'm3', role: 'rguitar', name: 'Sol Cárdenas',  pos: 'DSL',   gear: { wedges: 1, iem: false, amp: true,  pedalboard: true,  di: false } },
+  { id: 'm4', role: 'bass',    name: 'Yuri Halász',   pos: 'DSL2',  gear: { wedges: 1, iem: false, amp: true,  pedalboard: true,  di: true  } },
+  { id: 'm5', role: 'keys',    name: 'Aldo Reyes',    pos: 'DSR2',  gear: { wedges: 1, iem: true,  amp: false, pedalboard: false, di: true  } },
+  { id: 'm6', role: 'bgv',     name: 'Mei Tanaka',    pos: 'CSC',   gear: { wedges: 1, iem: true,  amp: false, pedalboard: false, di: false } },
+  { id: 'm7', role: 'drums',   name: 'Río Beltrán',   pos: 'RISER', gear: { wedges: 0, iem: true,  amp: false, pedalboard: false, di: false } },
+];
+
+const DEFAULT_EXTRAS = {
+  sidefills: true,
+  drumfill: true,
+  powerDropList: [
+    { id: 'p1', x: 120, y: 38 },
+    { id: 'p2', x: 380, y: 38 },
+    { id: 'p3', x: 620, y: 38 },
+    { id: 'p4', x: 880, y: 38 },
+  ],
+  risers: [
+    { id: 'r1', x: 500, y: 180, w: 160, h: 140, label: 'DRUM RISER', heightIn: 24 },
+  ],
+  notes: 'Backline shared with co-headliner. House drum kit OK; band brings cymbals + snare. 2× extra DI for guests during last song.',
+};
+
+function uid(prefix) {
+  return prefix + Math.random().toString(36).slice(2, 8);
+}
+
+Object.assign(window, {
+  ROLES, ROLE_KEYS, POSITIONS, POSITION_KEYS,
+  STAGE_SIZES, PLOT_TYPES,
+  channelsForRole, backlineForRole,
+  DEFAULT_SHOW, DEFAULT_MUSICIANS, DEFAULT_EXTRAS,
+  uid,
+});
+
+  </script>
+  <script type="text/babel" data-presets="react">
+// stage.jsx — SVG stage canvas with illustrated top-down icons, draggable
+// musicians, stage size presets, and plot view emphasis (full/foh/monitor).
+
+const STAGE_W = 1000;
+const STAGE_H = 600;
+
+// Stage shapes: each returns a clip path (and a stage outline path) given dims.
+function stageShapePaths(shape, w, h) {
+  switch (shape) {
+    case 'thrust': {
+      const tx = w * 0.36, tw = w * 0.28, th = h * 0.18;
+      return {
+        outline: `M0 0 H${w} V${h} H${tx + tw} V${h + th} H${tx} V${h} H0 Z`,
+        viewExtend: th,
+      };
+    }
+    case 'round': {
+      // Circle inscribed in viewbox (we draw an ellipse using full width).
+      // Audience surrounds — handled by callers.
+      return { outline: '', viewExtend: 0, round: true };
+    }
+    case 'wide':
+    case 'rect':
+    default:
+      return { outline: `M0 0 H${w} V${h} H0 Z`, viewExtend: 0 };
+  }
+}
+
+// Resolve musician on-stage XY: preset key or custom coords.
+function musicianXY(m) {
+  if (m.pos === 'custom' && Number.isFinite(m.x) && Number.isFinite(m.y)) {
+    return { x: m.x, y: m.y, label: 'Custom' };
+  }
+  const p = POSITIONS[m.pos];
+  return p ? { x: p.x, y: p.y, label: p.label } : { x: STAGE_W / 2, y: STAGE_H / 2, label: '—' };
+}
+
+// Generic SVG drag wrapper. Translates client deltas into the SVG user-space
+// of whatever <svg> owns the rendered <g>, then calls onMove with new x,y.
+function DraggableG({ x, y, onMove, cursor = 'grab', className = '',
+                      bounds = { x0: 30, y0: 30, x1: STAGE_W - 30, y1: STAGE_H - 30 },
+                      children }) {
+  const ref = React.useRef(null);
+  const cleanupRef = React.useRef(null);
+
+  React.useEffect(() => () => { cleanupRef.current?.(); }, []);
+
+  const onPointerDown = (e) => {
+    if (!onMove) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const svg = ref.current.ownerSVGElement;
+    if (!svg) return;
+    const pt = svg.createSVGPoint();
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+    const inv = ctm.inverse();
+    const toSvg = (cx, cy) => {
+      pt.x = cx; pt.y = cy;
+      return pt.matrixTransform(inv);
+    };
+    const start = toSvg(e.clientX, e.clientY);
+    const sp = { x, y };
+    const move = (ev) => {
+      const cur = toSvg(ev.clientX, ev.clientY);
+      const nx = Math.max(bounds.x0, Math.min(bounds.x1, sp.x + (cur.x - start.x)));
+      const ny = Math.max(bounds.y0, Math.min(bounds.y1, sp.y + (cur.y - start.y)));
+      onMove(nx, ny);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      cleanupRef.current = null;
+    };
+    cleanupRef.current = up;
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return (
+    <g ref={ref} className={`sp-draggable ${className}`}
+       transform={`translate(${x} ${y})`}
+       style={onMove ? { cursor } : undefined}
+       onPointerDown={onPointerDown}>
+      {children}
+    </g>
+  );
+}
+
+// Plot-type emphasis: returns opacity for a category given current view.
+function emphFor(plotType, category) {
+  const t = PLOT_TYPES[plotType] || PLOT_TYPES.full;
+  return t.emphasize.includes(category) ? 1 : 0.22;
+}
+
+// ── Illustrated icon primitives ─────────────────────────────────────────────
+
+const MusicianIcon = React.memo(function MusicianIcon({ role, name, c, dimmed }) {
+  const r = ROLES[role];
+  const color = r?.color || '#888';
+  const short = r?.short || '?';
+  return (
+    <g opacity={dimmed ? 0.5 : 1}>
+      <ellipse cx="0" cy="6" rx="22" ry="14" fill={color} opacity="0.18" />
+      <ellipse cx="0" cy="6" rx="22" ry="14" fill="none" stroke={color} strokeWidth="1.5" />
+      <circle cx="0" cy="-2" r="11" fill={color} />
+      <circle cx="0" cy="-2" r="11" fill="none" stroke={c.bg} strokeWidth="1.5" />
+      <text x="0" y="1.5" textAnchor="middle" fontSize="9" fontWeight="700"
+            fontFamily="ui-monospace,'JetBrains Mono',monospace" fill={c.bg}>
+        {short}
+      </text>
+      <g transform="translate(0 32)">
+        <rect x="-38" y="-9" width="76" height="18" rx="3" fill={c.panel}
+              stroke={color} strokeWidth="1" />
+        <text x="0" y="3" textAnchor="middle" fontSize="9" fontWeight="600"
+              fontFamily="ui-sans-serif,system-ui" fill={c.text}>
+          {(name || r?.label || '').slice(0, 14).toUpperCase()}
+        </text>
+      </g>
+    </g>
+  );
+});
+
+function WedgeIcon({ x, y, rot = 0, c, label }) {
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${rot})`}>
+      <path d="M -18 -6 L 18 -6 L 14 8 L -14 8 Z" fill={c.panel2}
+            stroke={c.muted} strokeWidth="1" />
+      <line x1="-12" y1="0" x2="12" y2="0" stroke={c.muted} strokeWidth="0.8" />
+      <line x1="-10" y1="3" x2="10" y2="3" stroke={c.muted} strokeWidth="0.8" />
+      <text x="0" y="-9" textAnchor="middle" fontSize="6"
+            fontFamily="ui-monospace,monospace" fill={c.muted}>{label || 'WEDGE'}</text>
+    </g>
+  );
+}
+
+function AmpIcon({ x, y, label = 'AMP', rot = 0, c }) {
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${rot})`}>
+      <rect x="-22" y="-12" width="44" height="24" rx="2" fill={c.panel2}
+            stroke={c.muted} strokeWidth="1" />
+      <circle cx="-10" cy="0" r="6" fill="none" stroke={c.muted} strokeWidth="1" />
+      <circle cx="10" cy="0" r="6" fill="none" stroke={c.muted} strokeWidth="1" />
+      <line x1="-22" y1="-12" x2="-18" y2="-8" stroke={c.muted} strokeWidth="0.6" />
+      <line x1="22" y1="-12" x2="18" y2="-8" stroke={c.muted} strokeWidth="0.6" />
+      <text x="0" y="-15" textAnchor="middle" fontSize="6"
+            fontFamily="ui-monospace,monospace" fill={c.muted}>{label}</text>
+    </g>
+  );
+}
+
+function PedalboardIcon({ x, y, c, rot = 0 }) {
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${rot})`}>
+      <rect x="-16" y="-7" width="32" height="14" rx="2" fill={c.panel2}
+            stroke={c.muted} strokeWidth="1" />
+      {[-10, -3, 4, 11].map((px, i) => (
+        <circle key={i} cx={px} cy="0" r="2.2" fill={c.muted} opacity="0.7" />
+      ))}
+      <text x="0" y="-10" textAnchor="middle" fontSize="6"
+            fontFamily="ui-monospace,monospace" fill={c.muted}>PEDALS</text>
+    </g>
+  );
+}
+
+function DIIcon({ x, y, c, label = 'DI' }) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <rect x="-7" y="-7" width="14" height="14" rx="1.5" fill={c.accent}
+            stroke="#000" strokeOpacity="0.3" strokeWidth="0.8" />
+      <text x="0" y="2" textAnchor="middle" fontSize="7" fontWeight="700"
+            fontFamily="ui-monospace,monospace" fill="#000" fillOpacity="0.78">
+        {label}
+      </text>
+    </g>
+  );
+}
+
+function IEMIcon({ x, y, c }) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <rect x="-8" y="-6" width="16" height="12" rx="1.5" fill={c.panel2}
+            stroke={c.muted} strokeWidth="0.8" />
+      <circle cx="0" cy="0" r="2.5" fill="none" stroke={c.muted} strokeWidth="0.8" />
+      <text x="0" y="-9" textAnchor="middle" fontSize="5.5"
+            fontFamily="ui-monospace,monospace" fill={c.muted}>IEM</text>
+    </g>
+  );
+}
+
+function MicIcon({ x, y, c, accent }) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <circle cx="0" cy="0" r="4" fill={accent} stroke="#000" strokeOpacity="0.35"
+              strokeWidth="0.8" />
+      <circle cx="0" cy="0" r="1.6" fill="#000" fillOpacity="0.4" />
+      <circle cx="0" cy="0" r="9" fill="none" stroke={c.muted} strokeWidth="0.6"
+              strokeDasharray="2 2" opacity="0.5" />
+    </g>
+  );
+}
+
+function PowerIcon({ c }) {
+  return (
+    <g>
+      <rect x="-9" y="-7" width="18" height="14" rx="1.5" fill="#fbbf24"
+            stroke="#000" strokeOpacity="0.3" strokeWidth="0.8" />
+      <path d="M -2 -4 L -3 0 L 1 0 L -1 4 L 4 -1 L 1 -1 L 2 -4 Z"
+            fill="#000" fillOpacity="0.7" />
+      <text x="0" y="-9.5" textAnchor="middle" fontSize="5.5"
+            fontFamily="ui-monospace,monospace" fill={c.muted}>AC 20A</text>
+    </g>
+  );
+}
+
+// Riser — draggable rectangle, optional label + height in inches.
+function Riser({ r, c, onMove, onResize }) {
+  return (
+    <DraggableG x={r.x} y={r.y} onMove={onMove} cursor="move"
+                bounds={{ x0: r.w / 2 + 10, y0: r.h / 2 + 10,
+                          x1: STAGE_W - r.w / 2 - 10,
+                          y1: STAGE_H - r.h / 2 - 10 }}>
+      <rect x={-r.w / 2} y={-r.h / 2} width={r.w} height={r.h} rx="3"
+            fill={c.panel2} stroke={c.muted} strokeWidth="1.2" />
+      <rect x={-r.w / 2 + 2} y={-r.h / 2 + 2} width={r.w - 4} height={r.h - 4}
+            rx="2" fill="none" stroke={c.muted} strokeWidth="0.5"
+            strokeDasharray="2 4" opacity="0.6" />
+      <text x="0" y={-r.h / 2 - 6} textAnchor="middle" fontSize="7"
+            fontFamily="ui-monospace,monospace" fill={c.muted}
+            letterSpacing="0.16em">
+        {(r.label || 'RISER').toUpperCase()} · {Math.round(r.w / 16)}′ × {Math.round(r.h / 16)}′ × {r.heightIn || 0}″
+      </text>
+    </DraggableG>
+  );
+}
+
+const DrumKit = React.memo(function DrumKit({ x, y, c }) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <circle cx="0" cy="32" r="6" fill={c.panel2} stroke={c.muted} strokeWidth="0.8" />
+      <circle cx="0" cy="8" r="14" fill={c.panel2} stroke={c.muted} strokeWidth="1.2" />
+      <circle cx="0" cy="8" r="8" fill="none" stroke={c.muted} strokeWidth="0.6" />
+      <circle cx="-13" cy="14" r="7" fill={c.panel} stroke={c.muted} strokeWidth="1" />
+      <circle cx="-22" cy="6" r="6" fill="none" stroke="#facc15" strokeWidth="1.5" />
+      <circle cx="-22" cy="6" r="2" fill="#facc15" />
+      <circle cx="-7" cy="-6" r="6" fill={c.panel} stroke={c.muted} strokeWidth="1" />
+      <circle cx="16" cy="14" r="9" fill={c.panel} stroke={c.muted} strokeWidth="1" />
+      <circle cx="-18" cy="-8" r="9" fill="none" stroke="#facc15" strokeWidth="1.2" opacity="0.7" />
+      <circle cx="20" cy="-2" r="10" fill="none" stroke="#facc15" strokeWidth="1.2" opacity="0.7" />
+    </g>
+  );
+});
+
+// ── Build per-musician satellite gear positions ────────────────────────────
+
+// Each satellite is annotated with a category so plot-type emphasis can dim
+// the right things.
+function gearForMusician(m, posXY, c) {
+  const items = [];
+  const { x, y } = posXY;
+
+  for (let i = 0; i < (m.gear.wedges || 0); i++) {
+    const offset = (i - (m.gear.wedges - 1) / 2) * 26;
+    items.push({
+      Comp: WedgeIcon, cat: 'mon',
+      props: { x: x + offset, y: y + 38, rot: 0, c, label: `MIX ${i + 1}` },
+      key: `w${i}`,
+    });
+  }
+
+  if (m.role === 'vocal' || m.role === 'bgv') {
+    items.push({
+      Comp: MicIcon, cat: 'mic',
+      props: { x, y: y + 22, c, accent: c.accent },
+      key: 'mic',
+    });
+  }
+
+  if (m.role === 'drums') {
+    items.push({
+      Comp: DrumKit, cat: 'perf',
+      props: { x, y: y - 18, c },
+      key: 'kit',
+    });
+    // Drum overhead mics
+    items.push({
+      Comp: MicIcon, cat: 'mic',
+      props: { x: x - 26, y: y - 36, c, accent: c.accent },
+      key: 'oh-l',
+    });
+    items.push({
+      Comp: MicIcon, cat: 'mic',
+      props: { x: x + 26, y: y - 36, c, accent: c.accent },
+      key: 'oh-r',
+    });
+  }
+
+  if (m.gear.amp) {
+    items.push({
+      Comp: AmpIcon, cat: 'amp',
+      props: { x, y: y - 30, c, label: m.role === 'bass' ? 'BASS' : 'GTR' },
+      key: 'amp',
+    });
+    // Amp mic
+    items.push({
+      Comp: MicIcon, cat: 'mic',
+      props: { x: x - 4, y: y - 38, c, accent: c.accent },
+      key: 'amp-mic',
+    });
+  }
+
+  if (m.gear.pedalboard) {
+    items.push({
+      Comp: PedalboardIcon, cat: 'ped',
+      props: { x: x - 30, y: y + 18, c },
+      key: 'ped',
+    });
+  }
+
+  if (m.gear.di) {
+    items.push({
+      Comp: DIIcon, cat: 'di',
+      props: { x: x + 32, y: y + 20, c, label: 'DI' },
+      key: 'di',
+    });
+  }
+
+  if (m.gear.iem) {
+    items.push({
+      Comp: IEMIcon, cat: 'iem',
+      props: { x: x - 38, y: y - 8, c },
+      key: 'iem',
+    });
+  }
+
+  return items;
+}
+
+// ── Draggable musician group ────────────────────────────────────────────────
+
+function DraggableMusician({ m, posXY, c, onDrag, plotType }) {
+  const [hovering, setHovering] = React.useState(false);
+  const gear = gearForMusician(m, posXY, c);
+  const role = ROLES[m.role];
+
+  return (
+    <g>
+      {/* Gear renders at world coords; not part of the drag group */}
+      {gear.map(({ Comp, props, key, cat }) => (
+        <g key={key} opacity={emphFor(plotType, cat)}>
+          <Comp {...props} />
+        </g>
+      ))}
+      <DraggableG x={posXY.x} y={posXY.y}
+                  onMove={(nx, ny) => onDrag(m.id, nx, ny)}
+                  cursor="grab">
+        <g onPointerEnter={() => setHovering(true)}
+           onPointerLeave={() => setHovering(false)}>
+          {hovering && (
+            <circle cx="0" cy="0" r="30" fill="none"
+                    stroke={role?.color} strokeWidth="1.5"
+                    strokeDasharray="3 3" opacity="0.6" />
+          )}
+          <MusicianIcon role={m.role} name={m.name} c={c} />
+        </g>
+      </DraggableG>
+    </g>
+  );
+}
+
+// ── Main stage canvas ──────────────────────────────────────────────────────
+
+function StageCanvas({ show, musicians, extras, shape, stageSize, plotType,
+                       showGrid, theme, accent, exportRef,
+                       onMusicianMove, onPowerMove, onRiserMove }) {
+  const c = theme === 'dark' ? {
+    bg: '#0d0e10', panel: '#16181c', panel2: '#1c1f25', border: '#2a2d33',
+    text: '#e8e9ed', muted: '#8a8d96', subtle: '#3a3d44',
+    stage: '#13151a', stageEdge: accent, accent,
+  } : {
+    bg: '#f7f6f3', panel: '#ffffff', panel2: '#efece6', border: '#dcd7cd',
+    text: '#1a1a1a', muted: '#6b6b6b', subtle: '#c8c3b8',
+    stage: '#f1ede5', stageEdge: accent, accent,
+  };
+
+  const sz = STAGE_SIZES[stageSize] || STAGE_SIZES.festival;
+  const shapeData = stageShapePaths(shape, STAGE_W, STAGE_H);
+  const viewH = STAGE_H + (shapeData.viewExtend || 0) + 90;
+
+  const drummer = musicians.find((m) => m.role === 'drums');
+  const riserPositionFromDrummer = drummer ? musicianXY(drummer) : null;
+
+  const sidefills = extras.sidefills ? [
+    { x: 50,  y: STAGE_H - 40, rot: 90 },
+    { x: STAGE_W - 50, y: STAGE_H - 40, rot: -90 },
+  ] : [];
+
+  const drumfill = (extras.drumfill && riserPositionFromDrummer) ? {
+    x: riserPositionFromDrummer.x,
+    y: riserPositionFromDrummer.y - 60 * sz.riserScale,
+    rot: 180,
+  } : null;
+
+  return (
+    <div className="sp-stage-wrap" ref={exportRef}>
+      <svg viewBox={`-20 -20 ${STAGE_W + 40} ${viewH}`}
+           xmlns="http://www.w3.org/2000/svg"
+           className="sp-stage" preserveAspectRatio="xMidYMid meet">
+        <rect x="-20" y="-20" width={STAGE_W + 40} height={viewH} fill={c.bg} />
+
+        <text x={STAGE_W / 2} y="-6" textAnchor="middle" fontSize="9"
+              fontFamily="ui-monospace,monospace" fill={c.muted}
+              letterSpacing="0.18em">↑ UPSTAGE  ·  BACKLINE WALL</text>
+
+        {/* Stage floor */}
+        {shapeData.round ? (
+          <ellipse cx={STAGE_W / 2} cy={STAGE_H / 2}
+                   rx={STAGE_W / 2 - 20} ry={STAGE_H / 2 - 20}
+                   fill={c.stage} stroke={c.stageEdge} strokeWidth="2.5" />
+        ) : (
+          <path d={shapeData.outline} fill={c.stage} stroke={c.stageEdge}
+                strokeWidth="2.5" />
+        )}
+
+        {showGrid && (
+          <g opacity="0.4">
+            {Array.from({ length: 10 }, (_, i) => (
+              <line key={`v${i}`} x1={(i + 1) * 100} y1="0"
+                    x2={(i + 1) * 100} y2={STAGE_H}
+                    stroke={c.subtle} strokeWidth="0.5" strokeDasharray="3 3" />
+            ))}
+            {Array.from({ length: 5 }, (_, i) => (
+              <line key={`h${i}`} x1="0" y1={(i + 1) * 100}
+                    x2={STAGE_W} y2={(i + 1) * 100}
+                    stroke={c.subtle} strokeWidth="0.5" strokeDasharray="3 3" />
+            ))}
+            <text x={STAGE_W - 4} y="14" textAnchor="end" fontSize="7"
+                  fontFamily="ui-monospace,monospace" fill={c.muted}>
+              {sz.deck.toUpperCase()} DECK
+            </text>
+          </g>
+        )}
+
+        <line x1={STAGE_W / 2} y1="0" x2={STAGE_W / 2} y2={STAGE_H}
+              stroke={c.subtle} strokeWidth="0.8" strokeDasharray="6 5"
+              opacity="0.5" />
+        <text x={STAGE_W / 2 + 4} y={STAGE_H - 8} fontSize="7"
+              fontFamily="ui-monospace,monospace" fill={c.muted}
+              opacity="0.7">⎯ CL ⎯</text>
+
+        <text x="14" y={STAGE_H / 2} fontSize="10" fontFamily="ui-monospace,monospace"
+              fill={c.muted} writingMode="vertical-rl" letterSpacing="0.2em">
+          STAGE RIGHT
+        </text>
+        <text x={STAGE_W - 8} y={STAGE_H / 2} fontSize="10"
+              fontFamily="ui-monospace,monospace" fill={c.muted}
+              writingMode="vertical-rl" letterSpacing="0.2em">
+          STAGE LEFT
+        </text>
+
+        {/* Risers — draggable. Render before musicians so drum kit sits on top. */}
+        <g opacity={emphFor(plotType, 'perf')}>
+          {(extras.risers || []).map((r) => (
+            <Riser key={r.id} r={r} c={c}
+                   onMove={(nx, ny) => onRiserMove(r.id, nx, ny)} />
+          ))}
+        </g>
+
+        {/* Power drops — draggable */}
+        <g opacity={emphFor(plotType, 'pwr')}>
+          {(extras.powerDropList || []).map((p) => (
+            <DraggableG key={p.id} x={p.x} y={p.y}
+                        onMove={(nx, ny) => onPowerMove(p.id, nx, ny)}
+                        cursor="grab">
+              <PowerIcon c={c} />
+            </DraggableG>
+          ))}
+        </g>
+
+        {/* Drumfill */}
+        {drumfill && (
+          <g opacity={emphFor(plotType, 'mon')}>
+            <WedgeIcon {...drumfill} c={c} label="DRUMFILL" />
+          </g>
+        )}
+
+        {/* Sidefills */}
+        <g opacity={emphFor(plotType, 'mon')}>
+          {sidefills.map((s, i) => (
+            <g key={`sf${i}`}>
+              <rect x={s.x - 14} y={s.y - 22} width="28" height="44" rx="2"
+                    fill={c.panel2} stroke={c.muted} strokeWidth="1" />
+              <line x1={s.x - 10} y1={s.y - 10} x2={s.x + 10} y2={s.y - 10}
+                    stroke={c.muted} strokeWidth="0.8" />
+              <line x1={s.x - 10} y1={s.y} x2={s.x + 10} y2={s.y}
+                    stroke={c.muted} strokeWidth="0.8" />
+              <line x1={s.x - 10} y1={s.y + 10} x2={s.x + 10} y2={s.y + 10}
+                    stroke={c.muted} strokeWidth="0.8" />
+              <text x={s.x} y={s.y - 27} textAnchor="middle" fontSize="6"
+                    fontFamily="ui-monospace,monospace" fill={c.muted}>SIDEFILL</text>
+            </g>
+          ))}
+        </g>
+
+        {/* Musicians + gear (draggable) */}
+        {musicians.map((m) => {
+          const xy = musicianXY(m);
+          return (
+            <DraggableMusician key={m.id} m={m} posXY={xy} c={c}
+                               plotType={plotType} onDrag={onMusicianMove} />
+          );
+        })}
+
+        {/* Logo (data URL) — embedded in SVG so PNG export includes it */}
+        {show.logoDataUrl && (
+          <g>
+            <image href={show.logoDataUrl} x={20} y={STAGE_H - 90} width="80"
+                   height="80" preserveAspectRatio="xMidYMid meet" />
+          </g>
+        )}
+
+        {/* Audience strip */}
+        <g transform={`translate(0 ${STAGE_H + (shapeData.viewExtend || 0) + 20})`}>
+          <rect x="0" y="0" width={STAGE_W} height="36" fill={c.panel2}
+                stroke={c.border} strokeWidth="0.5" />
+          <text x={STAGE_W / 2} y="22" textAnchor="middle" fontSize="11"
+                fontFamily="ui-monospace,monospace" fill={c.muted}
+                letterSpacing="0.32em">▾  A U D I E N C E  ▾</text>
+        </g>
+
+        {/* Plot type watermark */}
+        {plotType !== 'full' && (
+          <g>
+            <rect x={STAGE_W - 130} y={STAGE_H - 36} width="118" height="22" rx="3"
+                  fill={c.accent} opacity="0.92" />
+            <text x={STAGE_W - 71} y={STAGE_H - 21} textAnchor="middle" fontSize="10"
+                  fontWeight="700" fontFamily="ui-monospace,monospace" fill="#000"
+                  letterSpacing="0.14em">
+              {PLOT_TYPES[plotType].label.toUpperCase()} VIEW
+            </text>
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
+Object.assign(window, { StageCanvas, STAGE_W, STAGE_H, musicianXY });
+
+  </script>
+  <script type="text/babel" data-presets="react">
+// mic-db.jsx — curated mic database (Shure, Sennheiser, Audio-Technica,
+// Beyerdynamic, Audix, AKG, DPA + Neumann, Royer, Electro-Voice for
+// completeness). Contextual autocomplete for the INPUT LIST's MIC/DI column
+// based on what the user typed in SOURCE.
+
+const MIC_DB = {
+  // Vocal (dynamic first — most common live — then condensers)
+  vocal: [
+    'Shure SM58',
+    'Shure Beta 58A',
+    'Shure SM58S',
+    'Shure SM7B',
+    'Shure SM7dB',
+    'Shure KSM8 Dualdyne',
+    'Shure KSM9',
+    'Shure KSM9HS',
+    'Sennheiser e835',
+    'Sennheiser e845',
+    'Sennheiser e935',
+    'Sennheiser e945',
+    'Sennheiser e965',
+    'Sennheiser MD421-II',
+    'Sennheiser MD431-II',
+    'Sennheiser MD441-U',
+    'Audio-Technica AE6100',
+    'Audio-Technica AE5400',
+    'Audio-Technica AE3300',
+    'Audio-Technica ATM510',
+    'Audio-Technica ATM710',
+    'Beyerdynamic TG V70d',
+    'Beyerdynamic M88 TG',
+    'Beyerdynamic Opus 99',
+    'Beyerdynamic TG V90r (ribbon)',
+    'Beyerdynamic TG V96',
+    'Audix OM5',
+    'Audix OM7',
+    'Audix VX5',
+    'AKG D5',
+    'AKG D7',
+    'AKG C5',
+    'AKG C535 EB',
+    'AKG C414 XLII',
+    'Neumann KMS 105',
+    'Neumann KMS 104',
+    'DPA d:facto 4018VL',
+    'DPA d:facto 4018',
+    'DPA 2028',
+    'DPA 4099 Vocal (clip-on)',
+    'Electro-Voice RE20',
+    'Telefunken M80',
+    'Heil PR35',
+    'Earthworks SR314',
+    'Earthworks SR40V',
+  ],
+  // Kick drum
+  kick: [
+    'Shure Beta 91A',
+    'Shure Beta 52A',
+    'Shure SM91',
+    'Sennheiser e602-II',
+    'Sennheiser e901 (boundary)',
+    'Sennheiser e902',
+    'Sennheiser MD421-II',
+    'AKG D112 MKII',
+    'AKG D12 VR',
+    'Audix D6',
+    'Audix D4 (sub-kick)',
+    'Audio-Technica ATM250',
+    'Audio-Technica AE2500 (dual capsule)',
+    'Beyerdynamic TG D71c (boundary)',
+    'Beyerdynamic M88 TG',
+    'Electro-Voice RE20',
+    'Yamaha SKRM-100 Subkick',
+  ],
+  // Snare top / bottom
+  snare: [
+    'Shure SM57',
+    'Shure Beta 57A',
+    'Shure Beta 56A',
+    'Sennheiser e604',
+    'Sennheiser e905',
+    'Sennheiser MD441-U',
+    'Audio-Technica ATM230',
+    'Audio-Technica AE5100',
+    'Audix i5',
+    'Audix DP7 (clip-on)',
+    'Beyerdynamic TG D57c',
+    'Beyerdynamic M201 TG',
+    'AKG C5900',
+    'Telefunken M80-SH',
+    'DPA 4055 (kick / snare)',
+    'Neumann KM 184',
+  ],
+  // Toms (rack + floor)
+  tom: [
+    'Sennheiser e604',
+    'Sennheiser e904',
+    'Sennheiser MD421-II',
+    'Audix D2 (rack tom)',
+    'Audix D4 (floor tom)',
+    'Audix DP7 (clip-on)',
+    'Shure SM57',
+    'Shure Beta 56A',
+    'Shure Beta 98A (clip-on)',
+    'Audio-Technica ATM230',
+    'Beyerdynamic TG D35d',
+    'Beyerdynamic Opus 88 (clip-on)',
+    'AKG C518 ML (clip-on)',
+    'DPA 4055 (clip-on)',
+  ],
+  // Hi-hat
+  hat: [
+    'Shure KSM137',
+    'Shure SM81',
+    'Shure Beta 181 (side-address)',
+    'Sennheiser MKH 8040',
+    'Sennheiser e914',
+    'Audio-Technica AT4051b',
+    'Audio-Technica AE5100',
+    'Beyerdynamic MC 930',
+    'AKG C451 B',
+    'Neumann KM 184',
+    'DPA 4011 (cardioid)',
+    'DPA 2011',
+    'DPA 4015 (wide cardioid)',
+    'Earthworks SR20',
+  ],
+  // Overheads
+  overhead: [
+    'Shure KSM32',
+    'Shure KSM137 (pair)',
+    'Shure SM81 (pair)',
+    'Sennheiser MKH 8040 (pair)',
+    'Sennheiser e914 (pair)',
+    'Audio-Technica AT4050',
+    'Audio-Technica AT4051b (pair)',
+    'AKG C414 XLII (pair)',
+    'AKG C451 B (pair)',
+    'AKG C214 (pair)',
+    'Neumann KM 184 (pair)',
+    'Neumann TLM 103',
+    'Beyerdynamic MC 930 (pair)',
+    'DPA 4011A (pair)',
+    'DPA 2011 (pair)',
+    'Earthworks SR40 (pair)',
+    'Earthworks SR20LS (pair)',
+    'Royer R-121 (ribbon, pair)',
+    'Coles 4038 (ribbon, pair)',
+  ],
+  // Bass cab
+  bassAmp: [
+    'Shure Beta 52A',
+    'Shure SM7B',
+    'Shure SM57',
+    'Sennheiser MD421-II',
+    'Sennheiser e602-II',
+    'Sennheiser e906',
+    'Electro-Voice RE20',
+    'Electro-Voice RE320',
+    'AKG D112 MKII',
+    'Audio-Technica ATM250',
+    'Audix D6',
+    'Beyerdynamic M88 TG',
+    'Beyerdynamic Opus 99',
+    'DPA 4055',
+    'Neumann FET 47',
+  ],
+  // Guitar amp
+  guitarAmp: [
+    'Shure SM57',
+    'Shure Beta 57A',
+    'Shure SM7B',
+    'Sennheiser e906',
+    'Sennheiser e609 Silver',
+    'Sennheiser MD421-II',
+    'Sennheiser MD441-U',
+    'Audio-Technica AE3000',
+    'Audio-Technica ATM450',
+    'Audix i5',
+    'Audix D2',
+    'Beyerdynamic M201 TG',
+    'Beyerdynamic M160 (ribbon)',
+    'AKG C414 XLII',
+    'AKG C451 B',
+    'Royer R-121 (ribbon)',
+    'Royer R-10 (ribbon)',
+    'Coles 4038 (ribbon)',
+    'DPA 4055',
+    'DPA 2011',
+    'Neumann TLM 102',
+  ],
+  // Horns / brass / sax
+  horn: [
+    'Shure Beta 98H (clip-on)',
+    'Shure SM57',
+    'Sennheiser e906',
+    'Sennheiser e908B (clip-on)',
+    'Sennheiser MD441-U',
+    'Audio-Technica ATM350 (clip-on)',
+    'Audio-Technica AT4050',
+    'Audix D2',
+    'Audix Microboom MB5050',
+    'Beyerdynamic MC 930',
+    'Beyerdynamic Opus 88 (clip-on)',
+    'AKG C519 ML (clip-on)',
+    'AKG C414 XLII',
+    'Neumann KM 184',
+    'DPA 4099 (clip-on)',
+    'DPA 4061 (lavalier)',
+    'Royer R-121 (ribbon)',
+  ],
+  // Acoustic instruments
+  acoustic: [
+    'Shure SM81',
+    'Shure KSM137',
+    'Shure Beta 181',
+    'Sennheiser MKH 8040',
+    'Sennheiser e914',
+    'Audio-Technica AT4051b',
+    'Audio-Technica PRO 35 (clip-on)',
+    'AKG C414 XLII',
+    'AKG C451 B',
+    'Neumann KM 184',
+    'Neumann KM 185',
+    'Beyerdynamic MC 930',
+    'DPA 4011',
+    'DPA 4099 (clip-on)',
+    'DPA 2011',
+    'Earthworks SR25',
+  ],
+  // Piano
+  piano: [
+    'Shure KSM32 (pair)',
+    'Shure SM81 (pair)',
+    'Shure Beta 91A (boundary)',
+    'Sennheiser MKH 8040 (pair)',
+    'Sennheiser e614 (pair)',
+    'AKG C414 XLII (pair)',
+    'AKG C451 B (pair)',
+    'Neumann KM 184 (pair)',
+    'DPA 4011 (pair)',
+    'DPA 4099P (clip-on, pair)',
+    'Earthworks PianoMic',
+    'Earthworks SR25 (pair)',
+  ],
+  // Room
+  room: [
+    'AKG C414 XLII (pair)',
+    'Shure KSM32 (pair)',
+    'Shure KSM44A',
+    'Neumann TLM 103',
+    'Neumann U87 Ai',
+    'Sennheiser MKH 8020 (pair)',
+    'Royer R-121 (pair)',
+    'Coles 4038 (pair)',
+    'DPA 4006A',
+    'Earthworks QTC40',
+  ],
+  // DI (also covers keys, sample pads, laptops, acoustic pickups)
+  di: [
+    'Radial JDI Passive',
+    'Radial J48 Active',
+    'Radial Pro DI Passive',
+    'Radial ProD2 Stereo',
+    'Radial JDV Mk5',
+    'Radial Reamp JCR',
+    'Countryman Type 85',
+    'Avalon U5',
+    'BSS AR-133',
+    'BSS AR-116',
+    'Whirlwind IMP 2',
+    'Klark Teknik DN100',
+    'Klark Teknik LBB 200',
+  ],
+  // IEM systems
+  iem: [
+    'Shure PSM 1000 (P10R+ receiver)',
+    'Shure PSM 900 (P9RA receiver)',
+    'Shure PSM 300 (P3RA receiver)',
+    'Sennheiser EW IEM G4',
+    'Sennheiser EW-DP IEM',
+    'Sennheiser SR 2050 IEM',
+    'Lectrosonics M2T/M2R',
+    'Wisycom MPR50-IEM',
+  ],
+  // Wireless mic systems
+  wireless: [
+    'Shure Axient Digital · AD2/B58',
+    'Shure ULX-D · ULXD2/B58',
+    'Shure QLX-D · QLXD2/B58',
+    'Shure SLX-D · SLXD2/B58',
+    'Sennheiser EW-DX SKM-S',
+    'Sennheiser EW-D SKM-S',
+    'Sennheiser Digital 6000 · SKM 6000',
+    'Sennheiser Digital 9000 · SKM 9000',
+    'Audio-Technica 3000 Series',
+    'Audio-Technica 5000 Series',
+  ],
+};
+
+// Common SOURCE values for the input list — used as suggestions on the
+// SOURCE field datalist.
+const INPUT_SOURCES = [
+  'Kick In', 'Kick Out', 'Snare Top', 'Snare Btm', 'Hi-Hat',
+  'Rack Tom', 'Floor Tom 1', 'Floor Tom 2',
+  'OH L', 'OH R',
+  'Bass DI', 'Bass Mic',
+  'Guitar 1', 'Guitar 2', 'Gtr Amp L', 'Gtr Amp R',
+  'Acoustic Guitar',
+  'Keys L', 'Keys R', 'Synth L', 'Synth R',
+  'Sample Pad', 'Tracks L', 'Tracks R', 'Click',
+  'Horn 1', 'Horn 2', 'Sax', 'Trumpet', 'Trombone',
+  'Perc OH L', 'Perc OH R', 'Conga', 'Bongo',
+  'Lead Vocal', 'BGV 1', 'BGV 2', 'BGV 3',
+  'Piano L', 'Piano R', 'Room L', 'Room R',
+  'Talkback',
+];
+
+// Source → mic category resolver.
+function micCategoryFor(src) {
+  const s = (src || '').toLowerCase().trim();
+  if (!s) return 'all';
+  if (/\bkick\b/.test(s)) return 'kick';
+  if (/snare/.test(s)) return 'snare';
+  if (/(rack\s*tom|floor\s*tom|\btom\b)/.test(s)) return 'tom';
+  if (/(hi.?hat|^hat\b|\shat\b)/.test(s)) return 'hat';
+  if (/(^| )oh( |$|\.|,)|overhead/.test(s)) return 'overhead';
+  if (/bass\s*(mic|amp|cab)/.test(s)) return 'bassAmp';
+  if (/(bass\s*di|bass$)/.test(s)) return 'di';
+  if (/(gtr|guitar)\s*(amp|cab|mic|\d|\sL\b|\sR\b)/.test(s)) return 'guitarAmp';
+  if (/^(gtr|guitar)\s*\d*$/.test(s)) return 'guitarAmp';
+  if (/horn|sax|trumpet|trombone|brass|tuba|french/.test(s)) return 'horn';
+  if (/(acoustic|nylon|mandolin|fiddle|violin|cello|ukulele|banjo)/.test(s)) return 'acoustic';
+  if (/piano/.test(s)) return 'piano';
+  if (/room|audience|amb/.test(s)) return 'room';
+  if (/(keys|synth|sample|track|click|laptop|pad|drum\s*machine)/.test(s)) return 'di';
+  if (/\bdi\b/.test(s)) return 'di';
+  if (/iem|in.?ear/.test(s)) return 'iem';
+  if (/wireless/.test(s)) return 'wireless';
+  if (/(vocal|bgv|lead|backing|chorus|talkback)/.test(s)) return 'vocal';
+  if (/(perc|conga|bongo|cajon|tambourine|shaker|cowbell|timbale|clave)/.test(s)) return 'tom';
+  return 'all';
+}
+
+const MIC_DB_ALL = [...new Set(Object.values(MIC_DB).flat())].sort();
+
+const MicDatalists = React.memo(function MicDatalists() {
+  return (
+    <>
+      <datalist id="sp-micdb-sources">
+        {INPUT_SOURCES.map((s) => <option key={s} value={s} />)}
+      </datalist>
+      {Object.entries(MIC_DB).map(([cat, opts]) => (
+        <datalist key={cat} id={`sp-micdb-${cat}`}>
+          {opts.map((o) => <option key={o} value={o} />)}
+        </datalist>
+      ))}
+      <datalist id="sp-micdb-all">
+        {MIC_DB_ALL.map((o) => <option key={o} value={o} />)}
+      </datalist>
+    </>
+  );
+});
+
+Object.assign(window, {
+  MIC_DB, INPUT_SOURCES, micCategoryFor, MicDatalists,
+});
+
+  </script>
+  <script type="text/babel" data-presets="react">
+// input-list.jsx — editable channel list table.
+
+function buildChannelList(musicians) {
+  const order = ['drums', 'bass', 'guitar', 'rguitar', 'keys', 'dj', 'horns',
+                 'perc', 'vocal', 'bgv'];
+  const sorted = [...musicians].sort((a, b) =>
+    order.indexOf(a.role) - order.indexOf(b.role));
+  const rows = [];
+  let ch = 1;
+  for (const m of sorted) {
+    const chs = channelsForRole(m.role, m.name);
+    for (const c of chs) {
+      rows.push({
+        id: uid('ch'), ch: ch++, ...c, role: m.role,
+      });
+    }
+  }
+  return rows;
+}
+
+const STAND_OPTIONS = ['tall', 'short', 'clip', '—'];
+
+function InputList({ channels, setChannels, musicians, show, accent, theme }) {
+  const update = (id, patch) => {
+    setChannels(channels.map((c) => c.id === id ? { ...c, ...patch } : c));
+  };
+  const remove = (id) => {
+    setChannels(channels.filter((c) => c.id !== id));
+  };
+  const add = () => {
+    const ch = (channels[channels.length - 1]?.ch || 0) + 1;
+    setChannels([...channels, {
+      id: uid('row'), ch, src: 'New source', mic: 'SM58', stand: 'tall',
+      actor: '', note: '', role: 'other',
+    }]);
+  };
+  const renumber = () => {
+    setChannels(channels.map((c, i) => ({ ...c, ch: i + 1 })));
+  };
+  const regenerate = () => {
+    if (!confirm('Regenerate channel list from current lineup? This discards your edits.'))
+      return;
+    setChannels(buildChannelList(musicians));
+  };
+  const move = (idx, dir) => {
+    const j = idx + dir;
+    if (j < 0 || j >= channels.length) return;
+    const next = [...channels];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    setChannels(next);
+  };
+
+  const actorOptions = musicians.map((m) => m.name).filter(Boolean);
+
+  // Stand totals for footer summary — auto-updates as user edits.
+  const stands = channels.reduce((acc, r) => {
+    if (r.stand && r.stand !== '—') acc[r.stand] = (acc[r.stand] || 0) + 1;
+    return acc;
+  }, {});
+
+  return (
+    <div className="sp-il">
+      <header className="sp-il-head">
+        <div>
+          <div className="sp-il-eyebrow">INPUT LIST · STAGE LEFT TO RIGHT</div>
+          <h2 className="sp-il-title">{show.band}</h2>
+          <div className="sp-il-meta">
+            {show.venue} · {show.date}
+          </div>
+        </div>
+        <div className="sp-il-totals">
+          <div className="sp-il-totals-row">
+            <span className="sp-il-totals-num" style={{ color: accent }}>
+              {channels.length}
+            </span>
+            <span className="sp-il-totals-lbl">channels</span>
+          </div>
+          <div className="sp-il-totals-row">
+            <span className="sp-il-totals-num">{musicians.length}</span>
+            <span className="sp-il-totals-lbl">performers</span>
+          </div>
+        </div>
+      </header>
+
+      <div className="sp-il-toolbar">
+        <button className="sp-btn-ghost sp-btn-tiny" onClick={renumber}>
+          Renumber 01…{String(channels.length).padStart(2, '0')}
+        </button>
+        <button className="sp-btn-ghost sp-btn-tiny" onClick={regenerate}>
+          ↻ Regenerate from lineup
+        </button>
+        <div className="sp-il-toolbar-spacer" />
+        <button className="sp-btn-add" onClick={add}>+ Channel</button>
+      </div>
+
+      <MicDatalists />
+
+      <table className="sp-il-table sp-il-table-editable">
+        <thead>
+          <tr>
+            <th style={{ width: 32 }}></th>
+            <th style={{ width: 56 }}>CH</th>
+            <th>SOURCE</th>
+            <th>MIC / DI</th>
+            <th style={{ width: 86 }}>STAND</th>
+            <th>ACTOR</th>
+            <th>NOTES</th>
+            <th style={{ width: 28 }}></th>
+          </tr>
+        </thead>
+        <tbody>
+          {channels.map((r, idx) => {
+            const roleColor = ROLES[r.role]?.color || '#888';
+            return (
+              <tr key={r.id}>
+                <td className="sp-il-handle">
+                  <button className="sp-il-arr" onClick={() => move(idx, -1)}
+                          title="Move up" disabled={idx === 0}>▲</button>
+                  <button className="sp-il-arr" onClick={() => move(idx, 1)}
+                          title="Move down"
+                          disabled={idx === channels.length - 1}>▼</button>
+                </td>
+                <td>
+                  <input className="sp-il-input sp-il-ch-input"
+                         style={{ borderColor: roleColor }}
+                         type="number" min="1" max="999"
+                         value={r.ch}
+                         onChange={(e) => update(r.id, { ch: Number(e.target.value) })} />
+                </td>
+                <td>
+                  <input className="sp-il-input sp-il-src" value={r.src}
+                         list="sp-micdb-sources" placeholder="Source"
+                         onChange={(e) => update(r.id, { src: e.target.value })} />
+                </td>
+                <td>
+                  <input className="sp-il-input sp-il-mic"
+                         list={`sp-micdb-${micCategoryFor(r.src)}`} value={r.mic}
+                         placeholder="Mic / DI"
+                         onChange={(e) => update(r.id, { mic: e.target.value })} />
+                </td>
+                <td>
+                  <select className="sp-il-input sp-il-stand"
+                          value={r.stand || '—'}
+                          onChange={(e) => update(r.id, { stand: e.target.value })}>
+                    {STAND_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </td>
+                <td>
+                  <select className="sp-il-input sp-il-actor"
+                          value={r.actor || ''}
+                          onChange={(e) => update(r.id, { actor: e.target.value })}>
+                    <option value="">—</option>
+                    {actorOptions.map((a) => (
+                      <option key={a} value={a}>{a}</option>
+                    ))}
+                    {r.actor && !actorOptions.includes(r.actor) && (
+                      <option value={r.actor}>{r.actor} (not in lineup)</option>
+                    )}
+                  </select>
+                </td>
+                <td>
+                  <input className="sp-il-input sp-il-note"
+                         value={r.note || ''} placeholder="—"
+                         onChange={(e) => update(r.id, { note: e.target.value })} />
+                </td>
+                <td>
+                  <button className="sp-pill-x" onClick={() => remove(r.id)}
+                          title="Remove channel">×</button>
+                </td>
+              </tr>
+            );
+          })}
+          {channels.length === 0 && (
+            <tr>
+              <td colSpan="8" className="sp-il-empty">
+                No channels. Click + Channel above to add one, or ↻ Regenerate
+                to pull from the current lineup.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      <footer className="sp-il-foot">
+        <div className="sp-il-summary">
+          <div className="sp-il-sum-h">STAND COUNT</div>
+          <div className="sp-il-sum-grid">
+            {Object.entries(stands).map(([k, v]) => (
+              <div key={k} className="sp-il-sum-cell">
+                <span className="sp-il-sum-num">{v}</span>
+                <span className="sp-il-sum-lbl">{k}</span>
+              </div>
+            ))}
+            {Object.keys(stands).length === 0 && (
+              <span className="sp-il-sum-lbl">no stands</span>
+            )}
+          </div>
+        </div>
+        <div className="sp-il-summary">
+          <div className="sp-il-sum-h">CONTACT</div>
+          <div className="sp-il-sum-text">
+            <div>{show.contact}</div>
+            <div className="sp-il-sum-muted">{show.engineer}</div>
+          </div>
+        </div>
+        <div className="sp-il-summary">
+          <div className="sp-il-sum-h">POWER</div>
+          <div className="sp-il-sum-text">{show.power}</div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+Object.assign(window, { InputList, buildChannelList });
+
+  </script>
+  <script type="text/babel" data-presets="react">
+// backline-db.jsx — curated database of common backline brands & models, plus
+// a category resolver so each row's BRAND/MODEL field gets context-aware
+// autocomplete based on what the user typed in ITEM.
+
+const BACKLINE_DB = {
+  drumKits: [
+    'DW Performance Series · 22/10/12/16',
+    "DW Collector's Series Maple · 22/10/12/16",
+    'DW Design Series · 22/10/12/16',
+    'Yamaha Stage Custom Birch · 22/10/12/16',
+    'Yamaha Recording Custom · 22/10/12/14',
+    'Yamaha Absolute Hybrid Maple · 22/10/12/16',
+    'Pearl Masters Maple Complete · 22/10/12/16',
+    'Pearl Reference Pure · 22/10/12/16',
+    'Pearl Decade Maple · 22/10/12/16',
+    'Tama Starclassic Walnut/Birch · 22/10/12/16',
+    'Tama Superstar Classic · 22/10/12/16',
+    'Tama Imperialstar · 22/10/12/16',
+    'Ludwig Classic Maple · 22/10/12/16',
+    'Ludwig Neusonic · 22/12/14/16',
+    'Gretsch USA Custom · 22/10/12/16',
+    'Gretsch Catalina Maple · 22/10/12/16',
+    'Sonor SQ2 · 22/10/12/14',
+    'Sonor AQ2 · 22/10/12/16',
+    'Mapex Mars Birch · 22/10/12/16',
+    'Mapex Saturn V · 22/10/12/14',
+  ],
+  snares: [
+    'Ludwig Black Beauty LB417 · 14×6.5',
+    'Ludwig Supraphonic LM402 · 14×6.5',
+    'Ludwig Supraphonic LM400 · 14×5',
+    'Ludwig Acrolite · 14×5',
+    'Pearl Free Floating Brass · 14×6.5',
+    'Pearl Sensitone Heritage Alloy · 14×6.5',
+    'Tama Bell Brass · 14×6.5',
+    'Tama Starphonic Maple · 14×6',
+    "DW Collector's Maple · 14×6",
+    "DW Performance Steel · 14×6.5",
+    'Yamaha Recording Custom Brass · 14×5.5',
+    'Gretsch USA Bell Brass · 14×6.5',
+    'Sonor AQ2 Maple · 14×6',
+    'Sonor SQ2 · 14×6.5',
+    'Slingerland Radio King · 14×6.5',
+    'Craviotto Solid Maple · 14×6',
+  ],
+  cymbals: [
+    'Zildjian K Custom · 14/16/18/21',
+    'Zildjian K Constantinople · 14/18/20/22',
+    'Zildjian A Custom · 14/16/18/20',
+    'Zildjian A Avedis · 14/16/18/22',
+    'Sabian HHX Evolution · 14/16/18/21',
+    'Sabian AAX · 14/16/18/20',
+    'Sabian HH Vanguard · 14/18/20/22',
+    'Meinl Byzance Vintage · 14/16/18/20',
+    'Meinl Byzance Extra Dry · 14/16/18/20',
+    'Paiste 2002 · 14/16/18/22',
+    'Paiste Signature Traditionals · 14/18/20/22',
+    'Istanbul Agop Mel Lewis · 14/18/20/22',
+    'Istanbul Agop Signature · 14/16/18/20',
+  ],
+  hardware: [
+    'Pearl Eliminator Demon Drive',
+    'Pearl Eliminator Redline',
+    'DW 9000 Series Pedal',
+    'DW 5000 Series Pedal',
+    'Tama Speed Cobra HP910',
+    'Tama Iron Cobra HP900',
+    'Yamaha FP9500D',
+    'Axis A Longboard',
+    'Mapex Falcon',
+    'Pearl Eliminator Hi-Hat H2050',
+    'DW 9500 Hi-Hat Stand',
+  ],
+  thrones: [
+    'Roc-N-Soc Manual Spindle',
+    'Roc-N-Soc Nitro',
+    'Roc-N-Soc Hugger',
+    'DW 9100M Tractor',
+    'Tama 1st Chair Ergo-Rider',
+    'Pearl Roadster D-3500',
+    'Gibraltar 9608 Moto Style',
+  ],
+  bassHeads: [
+    'Ampeg SVT-CL · 300W tube',
+    'Ampeg SVT-VR · 300W tube',
+    'Ampeg SVT-7 PRO · 1000W hybrid',
+    'Ampeg PF-800 · 800W class D',
+    'Aguilar Tone Hammer 700',
+    'Aguilar DB 751',
+    'Mesa Subway D-800+',
+    'Mesa Subway WD-800',
+    'Markbass Little Mark III · 500W',
+    'Markbass Big Bang · 500W',
+    'Gallien-Krueger MB800 Fusion',
+    'Gallien-Krueger 800RB',
+    'Fender Bassman 800',
+    'Orange AD200B MK3 · 200W tube',
+    'Orange Terror Bass · 500W',
+    'Trace Elliot Elf · 200W',
+    'Darkglass Microtubes 900',
+    'Darkglass M900v2',
+    'Eden WT-800',
+    'TC Electronic BH800',
+  ],
+  bassCabs: [
+    'Ampeg SVT-810E · 8×10',
+    'Ampeg SVT-810AV · 8×10',
+    'Ampeg SVT-410HLF · 4×10',
+    'Ampeg PF-115HE · 1×15',
+    'Mesa Subway 4×10',
+    'Mesa Subway 1×15',
+    'Aguilar DB 410',
+    'Aguilar DB 212',
+    'Aguilar SL 112',
+    'Markbass Standard 104HR · 4×10',
+    'Markbass NY 122',
+    'Gallien-Krueger Neo 412-II · 4×12',
+    'Gallien-Krueger Neo 410-III · 4×10',
+    'Bergantino NXT212',
+    'Bergantino HDN210',
+    'TC Electronic RS210',
+  ],
+  bassGuitars: [
+    'Fender American Pro II Precision Bass',
+    'Fender American Pro II Jazz Bass',
+    'Fender American Ultra Jazz Bass V',
+    'Fender Player Jazz Bass',
+    'Music Man StingRay 4',
+    'Music Man StingRay 5',
+    'Music Man Sterling',
+    'Rickenbacker 4003',
+    'Lakland 44-94 Deluxe',
+    'Lakland Skyline 55-02',
+    'Sadowsky NYC Standard 5',
+    'Sadowsky MetroLine RV5',
+    'Spector Euro 5LX',
+    'Spector NS-2',
+    'Warwick Streamer Stage I',
+    'Warwick Thumb Bolt-On',
+    'Ibanez SR1000',
+    'Ernie Ball Music Man Bongo',
+    'G&L L-2000',
+  ],
+  guitarAmps: [
+    "Fender Twin Reverb '65 RI · 85W",
+    "Fender Deluxe Reverb '65 RI · 22W",
+    "Fender Princeton Reverb '65 RI · 12W",
+    'Fender Hot Rod Deluxe IV · 40W',
+    'Fender Hot Rod DeVille 410 · 60W',
+    'Fender Bassbreaker 18/30 · 30W',
+    'Vox AC30C2 · 30W',
+    'Vox AC15C1 · 15W',
+    'Vox AC10C1 · 10W',
+    'Marshall JCM800 2203 · 100W head',
+    'Marshall JCM900 4100 · 100W head',
+    'Marshall DSL40CR · 40W combo',
+    'Marshall Origin 50C · 50W combo',
+    'Marshall Plexi Super Lead 1959 · 100W head',
+    'Mesa Boogie Mark V · 90W',
+    'Mesa Boogie Dual Rectifier · 100W',
+    'Mesa Boogie Lone Star · 100W',
+    'Mesa Boogie California Tweed · 40W',
+    'Mesa Boogie Mark VII · 90W head',
+    'Orange Rockerverb MKIII · 100W head',
+    'Orange OR15H · 15W head',
+    'Orange TH30 · 30W combo',
+    'Friedman BE-100 Deluxe · 100W head',
+    'Friedman Smallbox 50 · 50W head',
+    'Friedman Runt 20 · 20W combo',
+    'Bogner Shiva · 80W head',
+    'Bogner Ecstasy 101B',
+    'PRS Archon · 100W head',
+    'PRS HXDA · 50W head',
+    'Hiwatt DR103 Custom · 100W head',
+    'Two Rock Studio Pro 35 · 35W combo',
+    'Two Rock Classic Reverb Signature',
+    'Magnatone Super 59 · 45W combo',
+    'Magnatone Twilighter Stereo',
+    'Roland JC-120 · 120W combo',
+    'Matchless DC30 · 30W',
+    'Matchless Lightning · 15W',
+    'Tone King Imperial MKII · 20W combo',
+    'Suhr Bella Reverb · 22W combo',
+    'Diezel VH4 · 100W head',
+  ],
+  guitarCabs: [
+    'Marshall 1960A · 4×12 angled',
+    'Marshall 1960B · 4×12 straight',
+    'Marshall 1936 · 2×12',
+    'Mesa Boogie Rectifier 4×12 Standard',
+    'Mesa Boogie 1×12 Thiele',
+    'Orange PPC212 · 2×12',
+    'Orange PPC412 · 4×12',
+    'Friedman 2×12 Vintage',
+    'Vox V212C · 2×12',
+    'Bogner OS 4×12',
+    'Two-Rock 2×12 Signature',
+  ],
+  electricGuitars: [
+    'Fender American Pro II Stratocaster',
+    'Fender American Pro II Telecaster',
+    'Fender American Ultra Stratocaster HSS',
+    "Fender American Vintage II '61 Strat",
+    "Fender '62 Telecaster Custom RI",
+    'Fender Player Stratocaster',
+    'Gibson Les Paul Standard 60s',
+    'Gibson Les Paul Custom',
+    'Gibson SG Standard',
+    'Gibson ES-335',
+    'Gibson ES-339',
+    'Gibson Flying V',
+    'Gibson Explorer',
+    'PRS Custom 24',
+    'PRS McCarty 594',
+    'PRS Silver Sky',
+    'Gretsch G6128T Duo Jet',
+    'Gretsch G6120T Players Edition',
+    'Rickenbacker 360',
+    'Rickenbacker 330',
+    "Fender Jazzmaster American Pro II",
+    'Fender Mustang \'69 RI',
+    'Jackson Pro Soloist',
+    'ESP LTD EC-1000',
+    'Suhr Modern Pro',
+    'Tom Anderson Drop Top',
+  ],
+  acousticGuitars: [
+    'Martin D-28',
+    'Martin OM-28',
+    'Martin HD-35',
+    'Martin 000-15M',
+    'Taylor 814ce',
+    'Taylor 314ce',
+    'Taylor 614ce',
+    'Taylor GS Mini-e Koa',
+    'Gibson J-45',
+    'Gibson Hummingbird',
+    'Gibson Songwriter Standard',
+    'Guild D-55',
+    'Guild M-20',
+    'Collings D2H',
+    'Yamaha LL16 ARE',
+  ],
+  keyboards: [
+    'Nord Stage 4 · 88',
+    'Nord Stage 4 Compact · 73',
+    'Nord Stage 3 · 88',
+    'Nord Stage 3 Compact · 73',
+    'Nord Electro 6D · 73',
+    'Nord Wave 2',
+    'Nord Grand · 88 WK',
+    'Yamaha Montage M8x · 88',
+    'Yamaha CP88',
+    'Yamaha CP73',
+    'Yamaha MODX8+ · 88',
+    'Korg Nautilus 88',
+    'Korg Kronos 2 · 88',
+    'Korg Kronos LS · 88',
+    'Korg Grandstage 88',
+    'Roland Fantom 8 EX · 88',
+    'Roland RD-2000 · 88',
+    'Roland Jupiter-X',
+    'Roland VR-09 · 61',
+    'Sequential Prophet-10',
+    'Sequential Take 5',
+    'Moog One · 16-voice',
+    'Moog Matriarch',
+    'Hammond SK Pro · 73',
+    'Hammond XK-5',
+    'Crumar Mojo 61',
+    'Viscount Legend Solo',
+    'Studiologic Numa X Piano GT',
+  ],
+  keysStands: [
+    'K&M Omega 18810 · 2-tier',
+    'K&M Spider Pro · single',
+    'Ultimate Support Apex AX-48 Pro',
+    'Ultimate Support IQ-3000 · 2-tier',
+    'Quik-Lok Z-728 · 2-tier',
+    'On-Stage KS7350 · 2-tier',
+    'On-Stage KS7191 · double-X',
+    'Hercules KS410B',
+  ],
+  sustainPedals: [
+    'Yamaha FC3A · half-damper',
+    'Korg DS-1H · half-damper',
+    'Roland DP-10',
+    'M-Audio SP-2',
+    'Nord Sustain Pedal',
+    'Studiologic VFP-1/15',
+  ],
+  micStands: [
+    'K&M 210/9 · tall boom',
+    'K&M 259 · short straight',
+    'K&M 25950 · low boom',
+    'K&M 25600 · overhead',
+    'Atlas MS-25 · heavy boom',
+    'Triad-Orbit T2/M2',
+    'Triad-Orbit T3/M2',
+    'On-Stage MS7701B · tripod boom',
+    'On-Stage MS9701TB+ · heavy boom',
+  ],
+  vocalMics: [
+    'Shure Beta 58A',
+    'Shure SM58',
+    'Shure SM7B',
+    'Shure KSM8 Dualdyne',
+    'Shure KSM9',
+    'Sennheiser e935',
+    'Sennheiser e945',
+    'Sennheiser MD431-II',
+    'Audix OM5',
+    'Audix OM7',
+    'Neumann KMS 105',
+    'Telefunken M80',
+    'Earthworks SR314',
+    'DPA d:facto 4018',
+    'Heil PR35',
+  ],
+  drumMics: [
+    'Shure Beta 91A · kick in',
+    'Shure Beta 52A · kick out',
+    'AKG D6 · kick',
+    'Audix D6 · kick',
+    'Shure SM57 · snare top',
+    'Sennheiser e604 · toms',
+    'Sennheiser e904 · toms',
+    'Audix D2/D4 · toms',
+    'Shure KSM32 · overhead',
+    'Shure KSM137 · overhead/hat',
+    'Neumann KM184 · overhead',
+    'AKG C414 XLII · overhead',
+    'Earthworks DM6 · drum kit',
+  ],
+  instrumentMics: [
+    'Shure SM57 · amp',
+    'Sennheiser e906 · amp',
+    'Sennheiser MD421 · amp',
+    'Royer R-121 · ribbon',
+    'Coles 4038 · ribbon',
+    'AKG C414 XLII',
+    'Neumann KM184',
+    'Audix i5 · amp',
+  ],
+  iemPacks: [
+    'Shure PSM 1000 (P10R+ receiver)',
+    'Shure PSM 900 (P9RA receiver)',
+    'Shure PSM 300 (P3RA receiver)',
+    'Sennheiser EW IEM G4',
+    'Sennheiser EW-DP IEM',
+    'Sennheiser SR 2050 IEM',
+    'Lectrosonics M2T/M2R',
+    'Wisycom MPR50-IEM',
+  ],
+  wirelessSystems: [
+    'Shure Axient Digital (AD4Q + AD2/B58)',
+    'Shure ULX-D (ULXD4Q + ULXD2/B58)',
+    'Shure QLX-D · QLXD2/B58',
+    'Shure SLX-D',
+    'Sennheiser EW-DX',
+    'Sennheiser EW-D',
+    'Sennheiser Digital 6000',
+    'Lectrosonics Digital Hybrid',
+    'Audio-Technica 3000 Series',
+  ],
+  DIs: [
+    'Radial JDI Passive',
+    'Radial J48 Active',
+    'Radial Pro DI Passive',
+    'Radial ProD2 Stereo',
+    'Countryman Type 85',
+    'Avalon U5',
+    'BSS AR-133',
+    'Whirlwind IMP 2',
+    'Klark Teknik DN100',
+  ],
+  djControllers: [
+    'Pioneer CDJ-3000 (x2) + DJM-A9',
+    'Pioneer CDJ-3000 (x2) + DJM-V10',
+    'Pioneer CDJ-2000 NXS2 (x2) + DJM-900 NXS2',
+    'Pioneer DDJ-1000',
+    'Pioneer DDJ-FLX10',
+    'Pioneer Opus-Quad',
+    'Pioneer XDJ-RX3',
+    'Denon SC6000 (x2) + X1850 PRIME',
+    'Denon Prime 4+',
+    'Rane One',
+    'Rane Twelve MK2 + Seventy-Two MKII',
+    'Native Instruments S4 MK3',
+    'Native Instruments S8 MK2',
+  ],
+};
+
+// Common item names (for the ITEM column datalist).
+const BACKLINE_ITEMS = [
+  'Drum kit', 'Snare', 'Cymbals', 'Hardware', 'Throne', 'Kick pedal',
+  'Hi-hat stand', 'Bass amp', 'Bass cab', 'Bass guitar', 'Guitar amp',
+  'Guitar cab', 'Electric guitar', 'Acoustic guitar', 'Keyboard', 'Keys stand',
+  'Sustain pedal', 'Mic stand', 'Vocal mic', 'Drum mic', 'Instrument mic',
+  'IEM pack', 'Wireless system', 'DI box', 'DJ controller', 'Mixer',
+  'Riser', 'Patch bay', 'Snake', 'Power conditioner',
+];
+
+// Resolve which DB category a row belongs to based on its ITEM text.
+function backlineCategoryFor(item) {
+  const i = (item || '').toLowerCase().trim();
+  if (!i) return 'all';
+  if (/\b(drum\s*kit|kit|drums)\b/.test(i) && !/snare|cymbal/.test(i)) return 'drumKits';
+  if (/snare/.test(i)) return 'snares';
+  if (/cymbal/.test(i)) return 'cymbals';
+  if (/throne|stool/.test(i)) return 'thrones';
+  if (/hi-?hat\s*stand/.test(i)) return 'hardware';
+  if (/(kick\s*pedal|bass\s*pedal|hardware|double\s*pedal)/.test(i)) return 'hardware';
+  if (/sustain/.test(i)) return 'sustainPedals';
+  if (/bass\s*(amp|head)/.test(i)) return 'bassHeads';
+  if (/bass\s*cab/.test(i)) return 'bassCabs';
+  if (/bass(\s|$)/.test(i)) return 'bassGuitars';
+  if (/(gtr|guitar)\s*amp/.test(i)) return 'guitarAmps';
+  if (/(gtr|guitar)\s*cab/.test(i)) return 'guitarCabs';
+  if (/acoustic/.test(i)) return 'acousticGuitars';
+  if (/guitar|gtr/.test(i)) return 'electricGuitars';
+  if (/(keyboard|keys|piano|organ|synth)\s*stand/.test(i)) return 'keysStands';
+  if (/keyboard|piano|organ|synth/.test(i)) return 'keyboards';
+  if (/keys(\s|$)/.test(i)) return 'keyboards';
+  if (/mic\s*stand/.test(i)) return 'micStands';
+  if (/(iem|in.?ear)/.test(i)) return 'iemPacks';
+  if (/wireless/.test(i)) return 'wirelessSystems';
+  if (/\bdi(\s|box|$)/.test(i)) return 'DIs';
+  if (/dj|controller|cdj|turntable|mixer/.test(i)) return 'djControllers';
+  if (/drum\s*mic|kick\s*mic|snare\s*mic|tom\s*mic|overhead/.test(i)) return 'drumMics';
+  if (/vocal\s*mic|bgv\s*mic/.test(i)) return 'vocalMics';
+  if (/instrument\s*mic|amp\s*mic|horn\s*mic/.test(i)) return 'instrumentMics';
+  if (/mic\b/.test(i)) return 'vocalMics';
+  return 'all';
+}
+
+// Precomputed list of every model across categories — used for the "all" fallback.
+const BACKLINE_ALL = [...new Set(
+  Object.values(BACKLINE_DB).flat()
+)];
+
+// Render the datalists once. Each row's BRAND/MODEL input references one by
+// the resolved category ID.
+const BacklineDatalists = React.memo(function BacklineDatalists() {
+  return (
+    <>
+      <datalist id="sp-bldb-items">
+        {BACKLINE_ITEMS.map((it) => <option key={it} value={it} />)}
+      </datalist>
+      {Object.entries(BACKLINE_DB).map(([cat, opts]) => (
+        <datalist key={cat} id={`sp-bldb-${cat}`}>
+          {opts.map((o) => <option key={o} value={o} />)}
+        </datalist>
+      ))}
+      <datalist id="sp-bldb-all">
+        {BACKLINE_ALL.map((o) => <option key={o} value={o} />)}
+      </datalist>
+    </>
+  );
+});
+
+Object.assign(window, {
+  BACKLINE_DB, BACKLINE_ITEMS, backlineCategoryFor, BacklineDatalists,
+});
+
+  </script>
+  <script type="text/babel" data-presets="react">
+// backline.jsx — editable backline (equipment) list.
+
+const OWNER_OPTIONS = ['Band', 'House', 'Venue', 'Rented'];
+
+function buildBacklineList(musicians) {
+  const order = ['drums', 'bass', 'guitar', 'rguitar', 'keys', 'dj', 'horns',
+                 'perc', 'vocal', 'bgv'];
+  const sorted = [...musicians].sort((a, b) =>
+    order.indexOf(a.role) - order.indexOf(b.role));
+  const rows = [];
+  for (const m of sorted) {
+    const items = backlineForRole(m.role, m.name);
+    for (const it of items) {
+      rows.push({
+        id: uid('bl'),
+        actor: m.name, role: m.role, ...it,
+      });
+    }
+  }
+  return rows;
+}
+
+function BacklineList({ backline, setBackline, musicians, show, accent }) {
+  const update = (id, patch) => {
+    setBackline(backline.map((b) => b.id === id ? { ...b, ...patch } : b));
+  };
+  const remove = (id) => {
+    setBackline(backline.filter((b) => b.id !== id));
+  };
+  const add = () => {
+    setBackline([...backline, {
+      id: uid('bl'),
+      item: 'New item', detail: '', owner: 'Band', note: '',
+      actor: '', role: 'other',
+    }]);
+  };
+  const regenerate = () => {
+    if (!confirm('Regenerate backline from current lineup? This discards your edits.'))
+      return;
+    setBackline(buildBacklineList(musicians));
+  };
+  const move = (idx, dir) => {
+    const j = idx + dir;
+    if (j < 0 || j >= backline.length) return;
+    const next = [...backline];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    setBackline(next);
+  };
+
+  const actorOptions = musicians.map((m) => m.name).filter(Boolean);
+
+  // Owner totals for footer summary.
+  const owners = backline.reduce((acc, r) => {
+    const k = r.owner || '—';
+    acc[k] = (acc[k] || 0) + 1;
+    return acc;
+  }, {});
+
+  return (
+    <div className="sp-il">
+      <BacklineDatalists />
+      <header className="sp-il-head">
+        <div>
+          <div className="sp-il-eyebrow">BACKLINE · EQUIPMENT LIST</div>
+          <h2 className="sp-il-title">{show.band}</h2>
+          <div className="sp-il-meta">
+            {show.venue} · {show.date}
+          </div>
+        </div>
+        <div className="sp-il-totals">
+          <div className="sp-il-totals-row">
+            <span className="sp-il-totals-num" style={{ color: accent }}>
+              {backline.length}
+            </span>
+            <span className="sp-il-totals-lbl">items</span>
+          </div>
+          <div className="sp-il-totals-row">
+            <span className="sp-il-totals-num">{musicians.length}</span>
+            <span className="sp-il-totals-lbl">performers</span>
+          </div>
+        </div>
+      </header>
+
+      <div className="sp-il-toolbar">
+        <button className="sp-btn-ghost sp-btn-tiny" onClick={regenerate}>
+          ↻ Regenerate from lineup
+        </button>
+        <div className="sp-il-toolbar-spacer" />
+        <button className="sp-btn-add" onClick={add}>+ Item</button>
+      </div>
+
+      <table className="sp-il-table sp-il-table-editable">
+        <thead>
+          <tr>
+            <th style={{ width: 32 }}></th>
+            <th>ITEM</th>
+            <th>BRAND / MODEL</th>
+            <th style={{ width: 96 }}>OWNER</th>
+            <th>FOR</th>
+            <th>NOTES</th>
+            <th style={{ width: 28 }}></th>
+          </tr>
+        </thead>
+        <tbody>
+          {backline.map((r, idx) => {
+            const roleColor = ROLES[r.role]?.color || '#888';
+            return (
+              <tr key={r.id}>
+                <td className="sp-il-handle">
+                  <button className="sp-il-arr" onClick={() => move(idx, -1)}
+                          title="Move up" disabled={idx === 0}>▲</button>
+                  <button className="sp-il-arr" onClick={() => move(idx, 1)}
+                          title="Move down"
+                          disabled={idx === backline.length - 1}>▼</button>
+                </td>
+                <td>
+                  <div className="sp-bl-item-cell">
+                    <span className="sp-bl-dot" style={{ background: roleColor }} />
+                    <input className="sp-il-input sp-il-src" value={r.item}
+                           list="sp-bldb-items" placeholder="Item"
+                           onChange={(e) => update(r.id, { item: e.target.value })} />
+                  </div>
+                </td>
+                <td>
+                  <input className="sp-il-input sp-il-mic" value={r.detail || ''}
+                         list={`sp-bldb-${backlineCategoryFor(r.item)}`}
+                         placeholder="brand / model / size"
+                         onChange={(e) => update(r.id, { detail: e.target.value })} />
+                </td>
+                <td>
+                  <select className={`sp-il-input sp-il-stand sp-bl-owner sp-bl-owner-${(r.owner || '').toLowerCase()}`}
+                          value={r.owner || ''}
+                          onChange={(e) => update(r.id, { owner: e.target.value })}>
+                    {OWNER_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </td>
+                <td>
+                  <select className="sp-il-input sp-il-actor"
+                          value={r.actor || ''}
+                          onChange={(e) => update(r.id, { actor: e.target.value })}>
+                    <option value="">—</option>
+                    {actorOptions.map((a) => (
+                      <option key={a} value={a}>{a}</option>
+                    ))}
+                    {r.actor && !actorOptions.includes(r.actor) && (
+                      <option value={r.actor}>{r.actor} (not in lineup)</option>
+                    )}
+                  </select>
+                </td>
+                <td>
+                  <input className="sp-il-input sp-il-note"
+                         value={r.note || ''} placeholder="—"
+                         onChange={(e) => update(r.id, { note: e.target.value })} />
+                </td>
+                <td>
+                  <button className="sp-pill-x" onClick={() => remove(r.id)}
+                          title="Remove item">×</button>
+                </td>
+              </tr>
+            );
+          })}
+          {backline.length === 0 && (
+            <tr>
+              <td colSpan="7" className="sp-il-empty">
+                No backline items. Click + Item or ↻ Regenerate from lineup.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      <footer className="sp-il-foot">
+        <div className="sp-il-summary">
+          <div className="sp-il-sum-h">PROVIDED BY</div>
+          <div className="sp-il-sum-grid">
+            {Object.entries(owners).map(([k, v]) => (
+              <div key={k} className="sp-il-sum-cell">
+                <span className="sp-il-sum-num">{v}</span>
+                <span className="sp-il-sum-lbl">{k.toLowerCase()}</span>
+              </div>
+            ))}
+            {Object.keys(owners).length === 0 && (
+              <span className="sp-il-sum-lbl">no items</span>
+            )}
+          </div>
+        </div>
+        <div className="sp-il-summary">
+          <div className="sp-il-sum-h">CONTACT</div>
+          <div className="sp-il-sum-text">
+            <div>{show.contact}</div>
+            <div className="sp-il-sum-muted">{show.engineer}</div>
+          </div>
+        </div>
+        <div className="sp-il-summary">
+          <div className="sp-il-sum-h">POWER</div>
+          <div className="sp-il-sum-text">{show.power}</div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+Object.assign(window, { BacklineList, buildBacklineList });
+
+  </script>
+  <script type="text/babel" data-presets="react">
+// form.jsx — input forms for show details, musicians list, extras.
+
+function Field({ label, hint, children }) {
+  return (
+    <label className="sp-field">
+      <div className="sp-field-lbl">
+        <span>{label}</span>
+        {hint && <span className="sp-field-hint">{hint}</span>}
+      </div>
+      {children}
+    </label>
+  );
+}
+
+function ShowForm({ show, setShow }) {
+  const u = (k) => (e) => setShow({ ...show, [k]: e.target.value });
+  const onLogo = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => setShow({ ...show, logoDataUrl: reader.result });
+    reader.readAsDataURL(f);
+  };
+  return (
+    <section className="sp-form-section">
+      <header className="sp-form-h">
+        <span className="sp-form-num">01</span>
+        <h3>Show Details</h3>
+      </header>
+      <div className="sp-grid-2">
+        <Field label="Band / Artist">
+          <input className="sp-input" value={show.band} onChange={u('band')} />
+        </Field>
+        <Field label="Show / Tour">
+          <input className="sp-input" value={show.show} onChange={u('show')} />
+        </Field>
+        <Field label="Date">
+          <input className="sp-input" type="date" value={show.date}
+                 onChange={u('date')} />
+        </Field>
+        <Field label="Venue">
+          <input className="sp-input" value={show.venue} onChange={u('venue')} />
+        </Field>
+        <Field label="Contact" hint="tour mgr · phone">
+          <input className="sp-input" value={show.contact} onChange={u('contact')} />
+        </Field>
+        <Field label="Engineer" hint="FOH / monitors">
+          <input className="sp-input" value={show.engineer}
+                 onChange={u('engineer')} />
+        </Field>
+        <Field label="Power Spec" hint="AC requirements">
+          <input className="sp-input sp-span-2" value={show.power}
+                 onChange={u('power')} />
+        </Field>
+        <div className="sp-span-2 sp-logo-row">
+          <div className="sp-logo-preview">
+            {show.logoDataUrl
+              ? <img src={show.logoDataUrl} alt="logo" />
+              : <span>LOGO</span>}
+          </div>
+          <div className="sp-logo-actions">
+            <label className="sp-btn-ghost sp-btn-upload">
+              <input type="file" accept="image/*" onChange={onLogo}
+                     style={{ display: 'none' }} />
+              {show.logoDataUrl ? 'Replace logo' : 'Upload logo'}
+            </label>
+            {show.logoDataUrl && (
+              <button className="sp-btn-ghost"
+                      onClick={() => setShow({ ...show, logoDataUrl: null })}>
+                Remove
+              </button>
+            )}
+            <div className="sp-logo-hint">PNG or SVG, appears in plot &amp; export</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const MusicianRow = React.memo(function MusicianRow({ m, idx, update, remove }) {
+  const u = (k) => (e) => update({ ...m, [k]: e.target.value });
+  const ug = (k) => (v) => update({ ...m, gear: { ...m.gear, [k]: v } });
+  const role = ROLES[m.role];
+
+  return (
+    <div className="sp-mus-row">
+      <div className="sp-mus-head">
+        <span className="sp-mus-num" style={{ background: role.color }}>
+          {idx + 1}
+        </span>
+        <input className="sp-input sp-mus-name" value={m.name}
+               placeholder="Name" onChange={u('name')} />
+        <button className="sp-btn-ghost sp-btn-x" onClick={remove} title="Remove">
+          ×
+        </button>
+      </div>
+      <div className="sp-mus-grid">
+        <Field label="Role">
+          <select className="sp-input" value={m.role} onChange={u('role')}>
+            {ROLE_KEYS.map((k) => (
+              <option key={k} value={k}>{ROLES[k].label}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Position">
+          <select className="sp-input" value={m.pos} onChange={u('pos')}>
+            {POSITION_KEYS.map((k) => (
+              <option key={k} value={k}>{POSITIONS[k].label}</option>
+            ))}
+            {m.pos === 'custom' && (
+              <option value="custom">
+                Custom ({Math.round(m.x || 0)}, {Math.round(m.y || 0)})
+              </option>
+            )}
+          </select>
+        </Field>
+        <Field label="Wedges">
+          <select className="sp-input" value={m.gear.wedges}
+                  onChange={(e) => ug('wedges')(Number(e.target.value))}>
+            {[0, 1, 2, 3].map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </Field>
+      </div>
+      <div className="sp-chips">
+        {['amp', 'pedalboard', 'di', 'iem'].map((k) => (
+          <label key={k} className={`sp-chip ${m.gear[k] ? 'on' : ''}`}>
+            <input type="checkbox" checked={!!m.gear[k]}
+                   onChange={(e) => ug(k)(e.target.checked)} />
+            <span>{k === 'iem' ? 'IEM' : k === 'di' ? 'DI' :
+                   k === 'amp' ? 'Amp' : 'Pedals'}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+});
+
+function MusiciansForm({ musicians, setMusicians }) {
+  const update = (i, m) => {
+    const next = [...musicians];
+    next[i] = m;
+    setMusicians(next);
+  };
+  const remove = (i) => {
+    setMusicians(musicians.filter((_, j) => j !== i));
+  };
+  const add = () => {
+    const id = 'm' + (Math.max(0, ...musicians.map((m) => +m.id.slice(1))) + 1);
+    setMusicians([...musicians, {
+      id, role: 'guitar', name: 'New Member', pos: 'CSC',
+      gear: { wedges: 1, iem: false, amp: false, pedalboard: false, di: false },
+    }]);
+  };
+
+  return (
+    <section className="sp-form-section">
+      <header className="sp-form-h">
+        <span className="sp-form-num">02</span>
+        <h3>Lineup <span className="sp-count">{musicians.length}</span></h3>
+        <button className="sp-btn-add" onClick={add}>+ Add</button>
+      </header>
+      <div className="sp-mus-list">
+        {musicians.map((m, i) => (
+          <MusicianRow key={m.id} m={m} idx={i}
+                       update={(nm) => update(i, nm)}
+                       remove={() => remove(i)} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ExtrasForm({ extras, setExtras }) {
+  const u = (k, v) => setExtras({ ...extras, [k]: v });
+
+  const addPower = () => {
+    const list = extras.powerDropList || [];
+    const id = 'p' + (Math.max(0, ...list.map((p) => +p.id.slice(1))) + 1);
+    // Stagger new drops slightly so they don't all stack.
+    const x = 100 + (list.length * 50) % (STAGE_W - 200);
+    u('powerDropList', [...list, { id, x, y: 38 }]);
+  };
+  const removePower = (id) => {
+    u('powerDropList', (extras.powerDropList || []).filter((p) => p.id !== id));
+  };
+  const resetPower = () => {
+    const n = (extras.powerDropList || []).length || 4;
+    const list = Array.from({ length: n }, (_, i) => ({
+      id: 'p' + (i + 1),
+      x: 100 + (i * (STAGE_W - 200)) / Math.max(1, n - 1),
+      y: 38,
+    }));
+    u('powerDropList', list);
+  };
+
+  const addRiser = () => {
+    const list = extras.risers || [];
+    const id = 'r' + (Math.max(0, ...list.map((r) => +r.id.slice(1))) + 1);
+    u('risers', [...list, {
+      id, x: STAGE_W / 2, y: 320, w: 128, h: 96,
+      label: 'Riser ' + (list.length + 1), heightIn: 12,
+    }]);
+  };
+  const updateRiser = (id, patch) => {
+    u('risers', (extras.risers || []).map((r) =>
+      r.id === id ? { ...r, ...patch } : r));
+  };
+  const removeRiser = (id) => {
+    u('risers', (extras.risers || []).filter((r) => r.id !== id));
+  };
+
+  return (
+    <section className="sp-form-section">
+      <header className="sp-form-h">
+        <span className="sp-form-num">03</span>
+        <h3>Extras &amp; Notes</h3>
+      </header>
+      <div className="sp-grid-2">
+        <label className={`sp-toggle-row ${extras.sidefills ? 'on' : ''}`}>
+          <input type="checkbox" checked={extras.sidefills}
+                 onChange={(e) => u('sidefills', e.target.checked)} />
+          <div>
+            <div className="sp-toggle-h">Sidefills</div>
+            <div className="sp-toggle-sub">Wing-mounted house monitors</div>
+          </div>
+        </label>
+        <label className={`sp-toggle-row ${extras.drumfill ? 'on' : ''}`}>
+          <input type="checkbox" checked={extras.drumfill}
+                 onChange={(e) => u('drumfill', e.target.checked)} />
+          <div>
+            <div className="sp-toggle-h">Drumfill</div>
+            <div className="sp-toggle-sub">Wedge upstage of drummer</div>
+          </div>
+        </label>
+      </div>
+
+      {/* Power drops */}
+      <div className="sp-sublist">
+        <div className="sp-sublist-h">
+          <span>AC DROPS <span className="sp-count">{(extras.powerDropList || []).length}</span></span>
+          <div className="sp-sublist-actions">
+            <button className="sp-btn-ghost sp-btn-tiny" onClick={resetPower}>Reset</button>
+            <button className="sp-btn-add" onClick={addPower}>+ Drop</button>
+          </div>
+        </div>
+        <div className="sp-sublist-hint">Drag each AC drop on stage to position.</div>
+        <div className="sp-pill-list">
+          {(extras.powerDropList || []).map((p, i) => (
+            <div key={p.id} className="sp-pill">
+              <span className="sp-pill-dot sp-pill-power" />
+              <span className="sp-pill-label">AC {String(i + 1).padStart(2, '0')}</span>
+              <span className="sp-pill-coord">{Math.round(p.x)},{Math.round(p.y)}</span>
+              <button className="sp-pill-x" onClick={() => removePower(p.id)}>×</button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Risers */}
+      <div className="sp-sublist">
+        <div className="sp-sublist-h">
+          <span>RISERS <span className="sp-count">{(extras.risers || []).length}</span></span>
+          <button className="sp-btn-add" onClick={addRiser}>+ Riser</button>
+        </div>
+        <div className="sp-sublist-hint">Drag each riser on stage to position.</div>
+        <div className="sp-riser-list">
+          {(extras.risers || []).map((r) => (
+            <div key={r.id} className="sp-riser-row">
+              <input className="sp-input sp-riser-label" value={r.label}
+                     onChange={(e) => updateRiser(r.id, { label: e.target.value })} />
+              <div className="sp-riser-dims">
+                <label>
+                  <span>W</span>
+                  <input className="sp-input" type="number" min="32" max="400"
+                         value={r.w}
+                         onChange={(e) => updateRiser(r.id, { w: Number(e.target.value) })} />
+                </label>
+                <label>
+                  <span>H</span>
+                  <input className="sp-input" type="number" min="32" max="300"
+                         value={r.h}
+                         onChange={(e) => updateRiser(r.id, { h: Number(e.target.value) })} />
+                </label>
+                <label>
+                  <span>↑″</span>
+                  <input className="sp-input" type="number" min="0" max="60"
+                         value={r.heightIn}
+                         onChange={(e) => updateRiser(r.id, { heightIn: Number(e.target.value) })} />
+                </label>
+              </div>
+              <button className="sp-pill-x" onClick={() => removeRiser(r.id)}>×</button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <Field label="Production notes" hint="anything FOH should know">
+        <textarea className="sp-input sp-textarea" value={extras.notes}
+                  rows="4" onChange={(e) => u('notes', e.target.value)} />
+      </Field>
+    </section>
+  );
+}
+
+Object.assign(window, { ShowForm, MusiciansForm, ExtrasForm });
+
+  </script>
+  <script type="text/babel" data-presets="react">
+// app.jsx — main shell: state, tabs, layout, exporters.
+
+const { useState, useRef, useMemo, useCallback } = React;
+
+const BRAND_PRESETS = [
+  '#f59e0b', // amber
+  '#ec4899', // magenta
+  '#06b6d4', // cyan
+  '#84cc16', // lime
+];
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "dark",
+  "accent": "#f59e0b",
+  "stageShape": "wide",
+  "stageSize": "festival",
+  "plotType": "full",
+  "stageScale": 1,
+  "showInputListTab": true,
+  "showBacklineTab": true,
+  "showGrid": true
+}/*EDITMODE-END*/;
+
+// ── Export helpers ─────────────────────────────────────────────────────────
+
+async function exportSvgAsPng(svgEl, filename, scale = 2) {
+  const clone = svgEl.cloneNode(true);
+  const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+  style.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+  `;
+  clone.insertBefore(style, clone.firstChild);
+
+  const xml = new XMLSerializer().serializeToString(clone);
+  const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  await new Promise((res, rej) => {
+    img.onload = res; img.onerror = rej; img.src = url;
+  });
+  const vb = svgEl.viewBox.baseVal;
+  const w = (vb.width || svgEl.clientWidth) * scale;
+  const h = (vb.height || svgEl.clientHeight) * scale;
+  const cnv = document.createElement('canvas');
+  cnv.width = w; cnv.height = h;
+  const ctx = cnv.getContext('2d');
+  ctx.drawImage(img, 0, 0, w, h);
+  URL.revokeObjectURL(url);
+  cnv.toBlob((b) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }, 'image/png');
+}
+
+function exportPdf() {
+  // Native print path — print stylesheet hides chrome and renders the visible
+  // tab full-bleed. User saves as PDF in the print dialog.
+  window.print();
+}
+
+// ── Tab bar ────────────────────────────────────────────────────────────────
+
+const TabBar = React.memo(function TabBar({ tab, setTab, hasInputList, hasBackline }) {
+  const tabs = [{ id: 'plot', label: 'Stage Plot' }];
+  if (hasInputList) tabs.push({ id: 'list', label: 'Input List' });
+  if (hasBackline)  tabs.push({ id: 'back', label: 'Backline' });
+  return (
+    <div className="sp-tabs" role="tablist">
+      {tabs.map((t) => (
+        <button key={t.id} className={`sp-tab ${tab === t.id ? 'on' : ''}`}
+                role="tab" aria-selected={tab === t.id}
+                onClick={() => setTab(t.id)}>
+          <span>{t.label}</span>
+          {tab === t.id && <i className="sp-tab-bar" />}
+        </button>
+      ))}
+    </div>
+  );
+});
+
+// ── Header strip on top of the canvas ──────────────────────────────────────
+
+const CanvasHeader = React.memo(function CanvasHeader({ show, accent, channelCount, performerCount, plotType }) {
+  return (
+    <div className="sp-canvas-head">
+      <div className="sp-canvas-head-l">
+        {show.logoDataUrl && (
+          <img src={show.logoDataUrl} alt="" className="sp-header-logo" />
+        )}
+        <div>
+          <div className="sp-canvas-eyebrow" style={{ color: accent }}>
+            ▌ STAGE PLOT · {(PLOT_TYPES[plotType]?.label || 'Full').toUpperCase()} VIEW
+          </div>
+          <h1 className="sp-canvas-band">{show.band || '—'}</h1>
+          <div className="sp-canvas-meta">
+            {show.show && <span>{show.show}</span>}
+            {show.venue && <span>·</span>}
+            {show.venue && <span>{show.venue}</span>}
+            {show.date && <span>·</span>}
+            {show.date && <span>{new Date(show.date).toLocaleDateString('en-US',
+              { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
+          </div>
+        </div>
+      </div>
+      <div className="sp-canvas-head-r">
+        <div className="sp-stat">
+          <span className="sp-stat-num">{performerCount}</span>
+          <span className="sp-stat-lbl">on stage</span>
+        </div>
+        <div className="sp-stat">
+          <span className="sp-stat-num" style={{ color: accent }}>
+            {channelCount}
+          </span>
+          <span className="sp-stat-lbl">channels</span>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ── Legend strip under the canvas ──────────────────────────────────────────
+
+const Legend = React.memo(function Legend({ accent, theme }) {
+  const items = [
+    { label: 'Performer',  swatch: 'role'   },
+    { label: 'Wedge',      swatch: 'wedge'  },
+    { label: 'Amp',        swatch: 'amp'    },
+    { label: 'DI box',     swatch: 'di'     },
+    { label: 'Pedalboard', swatch: 'ped'    },
+    { label: 'IEM pack',   swatch: 'iem'    },
+    { label: 'AC drop',    swatch: 'power'  },
+    { label: 'Mic',        swatch: 'mic'    },
+  ];
+  return (
+    <div className="sp-legend">
+      {items.map((it) => (
+        <div key={it.label} className="sp-legend-item">
+          <Swatch kind={it.swatch} accent={accent} />
+          <span>{it.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+});
+
+const Swatch = React.memo(function Swatch({ kind, accent }) {
+  const common = { width: 22, height: 22 };
+  if (kind === 'role') return (
+    <svg {...common} viewBox="-12 -12 24 24">
+      <ellipse cx="0" cy="2" rx="8" ry="5" fill="#ef476f" opacity="0.25" />
+      <circle cx="0" cy="-1" r="5" fill="#ef476f" />
+    </svg>
+  );
+  if (kind === 'wedge') return (
+    <svg {...common} viewBox="-12 -12 24 24">
+      <path d="M -10 -3 L 10 -3 L 7 6 L -7 6 Z" fill="currentColor"
+            opacity="0.4" stroke="currentColor" strokeWidth="0.8" />
+    </svg>
+  );
+  if (kind === 'amp') return (
+    <svg {...common} viewBox="-12 -12 24 24">
+      <rect x="-9" y="-6" width="18" height="12" rx="1" fill="currentColor"
+            opacity="0.3" stroke="currentColor" strokeWidth="0.8" />
+      <circle cx="-3" cy="0" r="2.5" fill="none" stroke="currentColor"
+              strokeWidth="0.8" />
+      <circle cx="3" cy="0" r="2.5" fill="none" stroke="currentColor"
+              strokeWidth="0.8" />
+    </svg>
+  );
+  if (kind === 'di') return (
+    <svg {...common} viewBox="-12 -12 24 24">
+      <rect x="-6" y="-6" width="12" height="12" rx="1.5" fill={accent} />
+      <text x="0" y="3" textAnchor="middle" fontSize="7" fontWeight="700"
+            fill="#000" fillOpacity="0.78"
+            fontFamily="ui-monospace,monospace">DI</text>
+    </svg>
+  );
+  if (kind === 'ped') return (
+    <svg {...common} viewBox="-12 -12 24 24">
+      <rect x="-9" y="-4" width="18" height="8" rx="1.5" fill="currentColor"
+            opacity="0.3" stroke="currentColor" strokeWidth="0.8" />
+      {[-6, -2, 2, 6].map((px) => (
+        <circle key={px} cx={px} cy="0" r="1.3" fill="currentColor" opacity="0.7" />
+      ))}
+    </svg>
+  );
+  if (kind === 'iem') return (
+    <svg {...common} viewBox="-12 -12 24 24">
+      <rect x="-7" y="-5" width="14" height="10" rx="1.2" fill="currentColor"
+            opacity="0.3" stroke="currentColor" strokeWidth="0.8" />
+      <circle cx="0" cy="0" r="2" fill="none" stroke="currentColor" strokeWidth="0.8" />
+    </svg>
+  );
+  if (kind === 'power') return (
+    <svg {...common} viewBox="-12 -12 24 24">
+      <rect x="-9" y="-7" width="18" height="14" rx="1.5" fill="#fbbf24"
+            stroke="#000" strokeOpacity="0.3" strokeWidth="0.8" />
+      <path d="M -2 -4 L -3 0 L 1 0 L -1 4 L 4 -1 L 1 -1 L 2 -4 Z"
+            fill="#000" fillOpacity="0.7" />
+    </svg>
+  );
+  if (kind === 'mic') return (
+    <svg {...common} viewBox="-12 -12 24 24">
+      <circle cx="0" cy="0" r="4" fill={accent} stroke="#000"
+              strokeOpacity="0.35" strokeWidth="0.8" />
+      <circle cx="0" cy="0" r="1.6" fill="#000" fillOpacity="0.4" />
+      <circle cx="0" cy="0" r="9" fill="none" stroke="currentColor"
+              strokeWidth="0.6" strokeDasharray="2 2" opacity="0.5" />
+    </svg>
+  );
+  return null;
+});
+
+// ── Main app ───────────────────────────────────────────────────────────────
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [tab, setTab] = useState('plot');
+  const [show, setShow] = useState(DEFAULT_SHOW);
+  const [musicians, setMusicians] = useState(DEFAULT_MUSICIANS);
+  const [extras, setExtras] = useState(DEFAULT_EXTRAS);
+  const [channels, setChannels] = useState(() => buildChannelList(DEFAULT_MUSICIANS));
+  const [backline, setBackline] = useState(() => buildBacklineList(DEFAULT_MUSICIANS));
+  // Start with form collapsed on narrow viewports so mobile lands on the canvas.
+  const [formCollapsed, setFormCollapsed] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 900
+  );
+  const [tweaksOpen, setTweaksOpen] = useState(false);
+
+  // Mirror TweaksPanel's open/closed state so the topbar button can reflect it.
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const ty = e?.data?.type;
+      if (ty === '__activate_edit_mode') setTweaksOpen(true);
+      else if (ty === '__deactivate_edit_mode') setTweaksOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const toggleTweaks = useCallback(() => {
+    if (tweaksOpen) {
+      window.postMessage({ type: '__deactivate_edit_mode' }, '*');
+      window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+    } else {
+      window.postMessage({ type: '__activate_edit_mode' }, '*');
+    }
+  }, [tweaksOpen]);
+
+  const stageRef = useRef(null);
+
+  // Drag handler — flips musician.pos to 'custom' and stores x/y.
+  const onMusicianMove = useCallback((id, x, y) => {
+    setMusicians((cur) => cur.map((m) =>
+      m.id === id ? { ...m, pos: 'custom', x, y } : m));
+  }, []);
+  const onPowerMove = useCallback((id, x, y) => {
+    setExtras((e) => ({
+      ...e,
+      powerDropList: (e.powerDropList || []).map((p) =>
+        p.id === id ? { ...p, x, y } : p),
+    }));
+  }, []);
+  const onRiserMove = useCallback((id, x, y) => {
+    setExtras((e) => ({
+      ...e,
+      risers: (e.risers || []).map((r) =>
+        r.id === id ? { ...r, x, y } : r),
+    }));
+  }, []);
+
+  const onExportPng = useCallback(() => {
+    const svg = stageRef.current?.querySelector('svg');
+    if (!svg) return;
+    exportSvgAsPng(svg, `${(show.band || 'stage-plot').replace(/\s+/g, '-')}.png`);
+  }, [show.band]);
+
+  // Apply theme class to document root so print + body bg get it too
+  React.useEffect(() => {
+    document.documentElement.dataset.theme = t.theme;
+    document.documentElement.style.setProperty('--sp-accent', t.accent);
+  }, [t.theme, t.accent]);
+
+  const validTabs = ['plot'];
+  if (t.showInputListTab) validTabs.push('list');
+  if (t.showBacklineTab)  validTabs.push('back');
+  const showTab = validTabs.includes(tab) ? tab : 'plot';
+
+  return (
+    <div className={`sp-app sp-theme-${t.theme}`}
+         data-screen-label="Stage Plot Generator">
+      {/* TOP BAR */}
+      <header className="sp-topbar">
+        <div className="sp-brand">
+          <div className="sp-brand-mark" style={{ background: t.accent }} />
+          <div>
+            <div className="sp-brand-name">STAGE PLOT</div>
+            <div className="sp-brand-sub">generator · v1</div>
+          </div>
+        </div>
+        <TabBar tab={showTab} setTab={setTab}
+                hasInputList={t.showInputListTab}
+                hasBackline={t.showBacklineTab} />
+        <div className="sp-topbar-actions">
+          <button className="sp-btn-ghost" onClick={() => setFormCollapsed((x) => !x)}>
+            {formCollapsed ? '▸ Form' : '◂ Hide form'}
+          </button>
+          <button className={`sp-btn-ghost ${tweaksOpen ? 'on' : ''}`}
+                  onClick={toggleTweaks}
+                  title={tweaksOpen ? 'Hide tweaks' : 'Show tweaks'}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <circle cx="5" cy="4" r="1.6" fill="currentColor" />
+              <line x1="2" y1="4" x2="3.4" y2="4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <line x1="6.6" y1="4" x2="14" y2="4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <circle cx="11" cy="8" r="1.6" fill="currentColor" />
+              <line x1="2" y1="8" x2="9.4" y2="8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <line x1="12.6" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <circle cx="7" cy="12" r="1.6" fill="currentColor" />
+              <line x1="2" y1="12" x2="5.4" y2="12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <line x1="8.6" y1="12" x2="14" y2="12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+            Tweaks
+          </button>
+          <button className="sp-btn" onClick={onExportPng}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M8 2v8m0 0L5 7m3 3 3-3M2 12v2h12v-2"
+                    stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+            PNG
+          </button>
+          <button className="sp-btn sp-btn-primary" onClick={exportPdf}
+                  style={{ background: t.accent, color: '#0d0e10' }}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M3 2h6l4 4v8H3V2z M9 2v4h4"
+                    stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+            </svg>
+            PDF
+          </button>
+        </div>
+      </header>
+
+      <main className={`sp-main ${formCollapsed ? 'collapsed' : ''}`}>
+        {/* FORM PANEL */}
+        {!formCollapsed && (
+          <>
+            <div className="sp-form-backdrop"
+                 onClick={() => setFormCollapsed(true)} />
+            <aside className="sp-form-panel" data-screen-label="Form Panel">
+              <div className="sp-form-mobile-close">
+                <button className="sp-btn-ghost"
+                        onClick={() => setFormCollapsed(true)}>
+                  Close ✕
+                </button>
+              </div>
+              <div className="sp-form-scroll">
+                <ShowForm show={show} setShow={setShow} />
+                <MusiciansForm musicians={musicians} setMusicians={setMusicians} />
+                <ExtrasForm extras={extras} setExtras={setExtras} />
+              </div>
+            </aside>
+          </>
+        )}
+
+        {/* CANVAS PANEL */}
+        <section className="sp-canvas-panel" data-screen-label="Canvas">
+          {showTab === 'plot' && (
+            <>
+              <CanvasHeader show={show} accent={t.accent}
+                            channelCount={channels.length}
+                            performerCount={musicians.length}
+                            plotType={t.plotType} />
+              <div className="sp-canvas-frame">
+                <div className="sp-canvas-inner"
+                     style={{ transform: `scale(${t.stageScale})` }}>
+                  <StageCanvas show={show} musicians={musicians}
+                               extras={extras} shape={t.stageShape}
+                               stageSize={t.stageSize}
+                               plotType={t.plotType}
+                               showGrid={t.showGrid} theme={t.theme}
+                               accent={t.accent} exportRef={stageRef}
+                               onMusicianMove={onMusicianMove}
+                               onPowerMove={onPowerMove}
+                               onRiserMove={onRiserMove} />
+                </div>
+              </div>
+              <div className="sp-canvas-foot">
+                <Legend accent={t.accent} theme={t.theme} />
+                {extras.notes && (
+                  <div className="sp-notes">
+                    <div className="sp-notes-h">PRODUCTION NOTES</div>
+                    <div className="sp-notes-body">{extras.notes}</div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+          {showTab === 'list' && (
+            <InputList musicians={musicians} show={show}
+                       channels={channels} setChannels={setChannels}
+                       accent={t.accent} theme={t.theme} />
+          )}
+          {showTab === 'back' && (
+            <BacklineList musicians={musicians} show={show}
+                          backline={backline} setBackline={setBackline}
+                          accent={t.accent} />
+          )}
+        </section>
+      </main>
+
+      {/* TWEAKS */}
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Theme" />
+        <TweakRadio label="Mode" value={t.theme}
+                    options={['dark', 'light']}
+                    onChange={(v) => setTweak('theme', v)} />
+        <TweakColor label="Brand color" value={t.accent}
+                    options={BRAND_PRESETS}
+                    onChange={(v) => setTweak('accent', v)} />
+
+        <TweakSection label="Stage" />
+        <TweakRadio label="Size" value={t.stageSize}
+                    options={[
+                      { value: 'festival', label: 'Festival' },
+                      { value: 'theater',  label: 'Theater'  },
+                      { value: 'club',     label: 'Club'     },
+                    ]}
+                    onChange={(v) => setTweak('stageSize', v)} />
+        <TweakRadio label="Shape" value={t.stageShape}
+                    options={[
+                      { value: 'wide',   label: 'Wide' },
+                      { value: 'rect',   label: 'Box'  },
+                      { value: 'thrust', label: 'Thrust' },
+                    ]}
+                    onChange={(v) => setTweak('stageShape', v)} />
+        <TweakSlider label="Scale" value={t.stageScale}
+                     min={0.7} max={1.3} step={0.05} unit="×"
+                     onChange={(v) => setTweak('stageScale', v)} />
+        <TweakToggle label="Show grid" value={t.showGrid}
+                     onChange={(v) => setTweak('showGrid', v)} />
+
+        <TweakSection label="Plot view" />
+        <TweakRadio label="Type" value={t.plotType}
+                    options={[
+                      { value: 'full',    label: 'Full'    },
+                      { value: 'foh',     label: 'FOH'     },
+                      { value: 'monitor', label: 'Mons'    },
+                    ]}
+                    onChange={(v) => setTweak('plotType', v)} />
+
+        <TweakSection label="Layout" />
+        <TweakToggle label="Input list tab" value={t.showInputListTab}
+                     onChange={(v) => setTweak('showInputListTab', v)} />
+        <TweakToggle label="Backline tab" value={t.showBacklineTab}
+                     onChange={(v) => setTweak('showBacklineTab', v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+  </script>
+</body>
+</html>
