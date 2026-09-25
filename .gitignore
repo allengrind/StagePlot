@@ -10,3 +10,6 @@ Thumbs.db
 
 # Project scratch
 scraps/
+
+# Heavy intermediate renders (regenerate with brand/los-rehenes/tools/render.js --alpha)
+*.mov
