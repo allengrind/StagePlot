@@ -56,3 +56,22 @@ node render_demo.js --stills 7.5,17,28.5,46      # fotogramas sueltos
 ```
 
 El material de los actos 2 y 3 sale del intro anterior (recortado para esquivar el logo quemado) y es solo ilustrativo; nombres y años del demo son de ejemplo.
+
+## Animatic sobre el audio "Presentación Rehenes"
+
+| Archivo | Qué es |
+|---|---|
+| `intro-demo/animatic.html` | Motor del animatic completo (2:54), 7 bloques amarrados a la narración |
+| `intro-demo/animatic-cues.js` | Hoja de cues: rejilla de beats medida + tiempos de la voz en off |
+| `intro-demo/map.js` | Contorno de tierra (Natural Earth 1:110m, dominio público) |
+| `renders/intro-animatic.mp4` | Animatic a 960×540 con código de tiempo |
+
+```bash
+cd tools
+python3 demo_frames.py /ruta/al/intro-viejo.mp4 animatic        # clips de archivo provisionales
+python3 map_paths.py land-110m.json                              # mapa (ver docstring para descargarlo)
+python3 animatic_cues.py /ruta/a/Presentacion_Rehenes.mp3        # beats + WAV (no se versiona)
+node render_demo.js --animatic --w 960                           # animatic; sin --w sale en 1920×1080
+```
+
+Los tiempos de narración salen de una transcripción automática (faster-whisper, modelo medium) y están escritos a mano en `animatic_cues.py`; los nombres están por confirmar con la banda.
