@@ -36,3 +36,23 @@ node render.js impact --alpha # -> renders/impact-alpha.mov (ProRes 4444 + alfa,
 - **Loudness**: −14 LUFS es referencia web/redes. Para PA o playback en show, bajar/subir en consola; el contenido tiene mucho sub (30–60 Hz) que en bocinas de laptop casi no se oye y en un sistema con subs sí pega.
 - **Alfa**: `neon` e `impact` funcionan bien con alfa. `glitch` en alfa arrastra sus capas de estática/scanlines de pantalla completa; para componer sobre video conviene la versión con fondo.
 - El tagline "CHICOS LOCOS" del escaneo original no está en el retrazo, así que no se incluye.
+
+## Demo del intro nuevo (propuesta)
+
+| Archivo | Qué es |
+|---|---|
+| `intro-demo/index.html` | Motor del demo de 50 s (4 actos), reproducible en navegador |
+| `intro-demo/timeline.js` | Hoja de cues compartida por imagen y audio (rejilla 100 BPM) |
+| `intro-demo/audio/demo.wav` | Música/diseño sonoro temporal del demo |
+| `renders/intro-demo.mp4` | Demo renderizado 1080p30 |
+| `propuesta/` | Página de propuesta para la banda y el músico |
+
+```bash
+cd tools
+python3 demo_frames.py /ruta/al/intro-viejo.mp4   # clips provisionales -> intro-demo/frames (no se versiona)
+python3 demo_audio.py                            # -> intro-demo/audio/demo.wav
+node render_demo.js                              # -> renders/intro-demo.mp4
+node render_demo.js --stills 7.5,17,28.5,46      # fotogramas sueltos
+```
+
+El material de los actos 2 y 3 sale del intro anterior (recortado para esquivar el logo quemado) y es solo ilustrativo; nombres y años del demo son de ejemplo.
