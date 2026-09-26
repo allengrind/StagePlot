@@ -16,3 +16,4 @@ scraps/
 
 # Intro demo placeholder footage (derived from the old intro; regenerate with tools/demo_frames.py)
 brand/los-rehenes/intro-demo/frames/
+__pycache__/
