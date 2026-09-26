@@ -73,7 +73,7 @@ const setImg = (img, url) => {
 };
 // nearest beat at or before t (for pulses)
 const lastBeat = t => { let b = -9; for (const x of C.beats) { if (x > t) break; b = x; } return b; };
-const CLIPS = [['c01', 48], ['c02', 60], ['c03', 57], ['c04', 84], ['c05', 84], ['c06', 75], ['c07', 33],
+const CLIPS = [['c01', 48], ['c02', 60], ['c03', 57], ['c04', 84], ['c05', 69], ['c06', 75], ['c07', 33],
                ['c08', 57], ['c09', 57], ['c10', 87], ['c11', 72], ['c12', 81], ['c13', 81], ['c14', 113]];
 
 const defs = el('defs', {}, svg);
@@ -469,7 +469,7 @@ const BAND = (() => {
       fl2.textContent = name;
       const np = E.out(prog(t, tn, tn + .35));
       set(nameT, { opacity: np, x: 130 + 50 * (1 - np) });
-      line.setAttribute('width', 700 * E.out(prog(t, tn + .1, tn + .6)));
+      line.setAttribute('width', 700 * E.out(prog(t, tn + .1, tn + .6)) * (1 - prog(t, C.memberEnds[mi] - .2, C.memberEnds[mi])));
       show(kin.g, t >= ti);
       kin.update(inst, ti, t, false, C.memberEnds[mi]);
       nameT.setAttribute('opacity', np * (1 - prog(t, C.memberEnds[mi] - .2, C.memberEnds[mi])));
