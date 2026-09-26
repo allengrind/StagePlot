@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Los Rehenes — Demo intro</title>
+<style>
+  @font-face { font-family: 'Anton'; src: url('fonts/anton-latin-400-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Oswald'; font-weight: 500; src: url('fonts/oswald-latin-500-normal.woff2') format('woff2'); }
+  html, body { margin: 0; background: #000; color: #eee; font: 14px system-ui, sans-serif; }
+  .stage { position: relative; width: 100%; max-width: 1280px; aspect-ratio: 16/9; margin: 0 auto; }
+  .stage svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .ctrl { max-width: 1280px; margin: 10px auto; display: flex; gap: 10px; align-items: center; padding: 0 16px; }
+  .ctrl input { flex: 1; accent-color: #F4DF06; }
+  .ctrl button { background: #1a1820; color: #eee; border: 1px solid #333; border-radius: 6px; padding: 8px 14px; }
+  body.render .stage { width: 1920px; height: 1080px; max-width: none; aspect-ratio: auto; margin: 0; }
+  body.render .ctrl { display: none; }
+  text { font-kerning: normal; }
+</style>
+</head>
+<body>
+<div class="stage"><svg id="svg" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg"></svg></div>
+<div class="ctrl"><button id="play">▶</button><input id="scrub" type="range" min="0" max="50" step="0.01" value="0"><span id="tc">0.00</span></div>
+<script src="../animation/data.js"></script>
+<script src="timeline.js"></script>
+<script>
+(() => {
+const NS = 'http://www.w3.org/2000/svg', D = window.DEMO, LOGO = window.LOGO;
+const svg = document.getElementById('svg');
+const params = new URLSearchParams(location.search);
+if (params.has('render')) document.body.classList.add('render');
+
+// ---------- helpers ----------
+const el = (tag, attrs = {}, parent) => {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+};
+const set = (n, a) => { for (const k in a) n.setAttribute(k, a[k]); };
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const E = {
+  inOut: x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2,
+  out: x => 1 - Math.pow(1 - x, 3),
+  in: x => x * x * x,
+  back: x => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); },
+};
+const rng = seed => () => {
+  seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+  let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+  return ((t ^ t >>> 14) >>> 0) / 4294967296;
+};
+const shake = (t, t0, amp, dur = .45, f = 38) => {
+  const x = t - t0;
+  if (x < 0 || x > dur) return [0, 0];
+  const d = amp * Math.pow(1 - x / dur, 2);
+  return [d * Math.sin(x * f * 6.283), d * Math.cos(x * f * 1.3 * 6.283 + 1.1)];
+};
+const flashAt = (t, t0, amt, dur = .25) => t >= t0 ? amt * Math.pow(1 - prog(t, t0, t0 + dur), 2) : 0;
+const pad = n => String(n).padStart(4, '0');
+const pending = [];
+// swap an <image> href and remember a promise that resolves when it has loaded
+const setImg = (img, url) => {
+  if (img.getAttribute('href') === url) return;
+  pending.push(new Promise(res => { img.addEventListener('load', res, { once: true }); img.addEventListener('error', res, { once: true }); }));
+  img.setAttribute('href', url);
+};
+const show = (n, on) => n.setAttribute('display', on ? 'inline' : 'none');
+
+const defs = el('defs', {}, svg);
+for (const name of ['outer', 'band', 'inner']) {
+  const g = el('g', { id: 'L-' + name, fill: LOGO.layers[name][0].fill }, defs);
+  for (const p of LOGO.layers[name]) el('path', { d: p.d, 'fill-rule': p.rule }, g);
+}
+const glow = (id, std, slope = 1) => {
+  const f = el('filter', { id, x: '-30%', y: '-50%', width: '160%', height: '200%' }, defs);
+  el('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: std, result: 'b' }, f);
+  const ct = el('feComponentTransfer', { in: 'b', result: 'bb' }, f);
+  const fa = el('feFuncA', { type: 'linear', slope }, ct);
+  const m = el('feMerge', {}, f);
+  el('feMergeNode', { in: 'bb' }, m); el('feMergeNode', { in: 'SourceGraphic' }, m);
+  return fa;
+};
+const beat = t => (t - D.grid0) / (60 / D.bpm);
+
+// ======================================================================
+// ACT 1 — ORIGEN: night sky over Zacatecas, neon line traces La Bufa
+// ======================================================================
+const A1 = (() => {
+  const root = el('g', {}, svg);
+  const sky = el('linearGradient', { id: 'a1-sky', x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+  [['0', '#03040c'], ['.55', '#0b1030'], ['.78', '#3a1d18'], ['.86', '#8a4a12'], ['1', '#120a06']]
+    .forEach(([o, c]) => el('stop', { offset: o, 'stop-color': c }, sky));
+  el('rect', { width: 1920, height: 1080, fill: 'url(#a1-sky)' }, root);
+  // milky way: soft diagonal band
+  const mwF = el('filter', { id: 'a1-mw', x: '-50%', y: '-50%', width: '200%', height: '200%' }, defs);
+  el('feGaussianBlur', { stdDeviation: 60 }, mwF);
+  el('ellipse', { cx: 960, cy: 420, rx: 1100, ry: 110, fill: '#8a93c8', opacity: .16, filter: 'url(#a1-mw)', transform: 'rotate(-18 960 420)' }, root);
+  const R = rng(99), stars = [];
+  const sg = el('g', {}, root);
+  for (let i = 0; i < 420; i++) {
+    const y = Math.pow(R(), 1.3) * 760;
+    stars.push({ n: el('circle', { cx: R() * 1920, cy: y, r: .6 + Math.pow(R(), 4) * 2.4, fill: R() < .15 ? '#ffe7b0' : '#fff' }, sg),
+                 ph: R() * 6.28, sp: 1 + R() * 3, base: .35 + R() * .65 });
+  }
+  const camG = el('g', {}, root);
+  // city lights below the horizon
+  const lights = [];
+  const lg = el('g', {}, camG);
+  for (let i = 0; i < 260; i++) {
+    const x = R() * 1920, y = 850 + Math.pow(R(), .7) * 230;
+    lights.push({ n: el('circle', { cx: x, cy: y, r: .8 + R() * 1.8, fill: R() < .7 ? '#ffb347' : '#fff3c4' }, lg), ph: R() * 6.28, d: R() });
+  }
+  // stylised La Bufa ridge (neon-traced) + chapel on the crown
+  const ridgeD = 'M0 862 L200 852 L380 834 L520 806 L640 776 L720 748 L780 712 L820 700 L850 664 L880 652 L900 616 L940 604 ' +
+    'L962 574 L990 566 L1004 552 L1028 548 L1052 556 L1082 552 L1118 566 L1160 572 L1188 600 L1228 640 L1300 700 ' +
+    'L1420 760 L1560 802 L1720 832 L1920 848';
+  const chapelD = 'M1006 552 L1006 520 L1014 508 L1022 520 L1022 552 M1014 508 L1014 494 M1009 499 L1019 499 M1022 530 L1044 530 L1044 552';
+  el('path', { d: ridgeD + ' L1920 1080 L0 1080 Z', fill: '#050308' }, camG);
+  glow('a1-glow', 5, 1.8);
+  const ridge = el('path', { d: ridgeD, fill: 'none', stroke: '#ED1C24', 'stroke-width': 4, 'stroke-linejoin': 'round',
+    pathLength: 1, 'stroke-dasharray': '1 1', filter: 'url(#a1-glow)' }, camG);
+  const chapel = el('path', { d: chapelD, fill: 'none', stroke: '#F4DF06', 'stroke-width': 3, pathLength: 1,
+    'stroke-dasharray': '1 1', filter: 'url(#a1-glow)', 'stroke-linecap': 'round' }, camG);
+  const title = el('text', { x: 960, y: 300, 'text-anchor': 'middle', fill: '#F4DF06', 'font-family': 'Oswald', 'font-weight': 500,
+    'font-size': 64, filter: 'url(#a1-glow)' }, root);
+  title.textContent = 'ZACATECAS · MÉXICO';
+  const sub = el('text', { x: 960, y: 360, 'text-anchor': 'middle', fill: '#fff', 'font-family': 'Oswald', 'font-size': 28, 'letter-spacing': 12 }, root);
+  sub.textContent = 'AQUÍ EMPEZÓ LA HISTORIA';
+  const fade = el('rect', { width: 1920, height: 1080, fill: '#000' }, root);
+  const c = D.a1;
+  return t => {
+    show(root, t < D.a2.start + .05);
+    if (t >= D.a2.start + .05) return;
+    stars.forEach(s => s.n.setAttribute('opacity', s.base * (.6 + .4 * Math.sin(t * s.sp + s.ph))));
+    const pr = prog(t, ...c.ridge);
+    ridge.setAttribute('stroke-dashoffset', 1 - E.inOut(pr));
+    chapel.setAttribute('stroke-dashoffset', 1 - E.out(prog(t, c.ridge[1] - .4, c.ridge[1] + .6)));
+    lights.forEach(l => l.n.setAttribute('opacity', clamp((pr - l.d * .8) * 4) * (.6 + .4 * Math.sin(t * 3 + l.ph))));
+    const pt = prog(t, ...c.title);
+    set(title, { opacity: E.out(pt), 'letter-spacing': 40 - 26 * E.out(pt) });
+    sub.setAttribute('opacity', E.out(prog(t, c.title[0] + .8, c.title[1] + .6)));
+    const push = 1 + .06 * prog(t, 0, c.out);
+    camG.setAttribute('transform', `translate(960 800) scale(${push}) translate(-960 -800)`);
+    fade.setAttribute('opacity', Math.max(1 - prog(t, 0, 1.2), prog(t, c.out, D.a2.start)));
+  };
+})();
+
+// ======================================================================
+// ACT 2 — TRAYECTORIA: archive in a CRT, VHS artefacts, year counter;
+// the signal breaks up and locks into "HOY".
+// ======================================================================
+const A2 = (() => {
+  const c = D.a2;
+  const root = el('g', {}, svg);
+  el('rect', { width: 1920, height: 1080, fill: '#07060a' }, root);
+  const nf = el('filter', { id: 'a2-noise', x: 0, y: 0, width: '100%', height: '100%' }, defs);
+  const turb = el('feTurbulence', { type: 'fractalNoise', baseFrequency: '0.8 0.03', numOctaves: 1, seed: 1 }, nf);
+  el('feColorMatrix', { type: 'saturate', values: 0 }, nf);
+  const noise = el('rect', { width: 1920, height: 1080, filter: 'url(#a2-noise)', opacity: .06 }, root);
+  const chan = { r: '1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0', g: '0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0', b: '0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0' };
+  for (const k in chan) { const f = el('filter', { id: 'a2-' + k }, defs); el('feColorMatrix', { type: 'matrix', values: chan[k] }, f); }
+  const vhsF = el('filter', { id: 'a2-vhs' }, defs);
+  el('feGaussianBlur', { stdDeviation: '1.2 .3' }, vhsF);
+  el('feColorMatrix', { type: 'saturate', values: 1.35 }, vhsF);
+
+  // CRT: 4:3 screen, x 880..1744 (864x648)
+  const TV = { x: 880, y: 196, w: 864, h: 648 };
+  const cam = el('g', {}, root);
+  el('rect', { x: TV.x - 26, y: TV.y - 26, width: TV.w + 52, height: TV.h + 52, rx: 38, fill: '#141217', stroke: '#2b2831', 'stroke-width': 3 }, cam);
+  const scr = el('clipPath', { id: 'a2-scr' }, defs);
+  el('rect', { x: TV.x, y: TV.y, width: TV.w, height: TV.h, rx: 24 }, scr);
+  const screen = el('g', { 'clip-path': 'url(#a2-scr)' }, cam);
+  el('rect', { x: TV.x, y: TV.y, width: TV.w, height: TV.h, fill: '#000' }, screen);
+  // each slice holds three channel-filtered copies of the frame (additive RGB split)
+  const imgs = [];
+  const N = 10, slices = [];
+  for (let i = 0; i < N; i++) {
+    const cp = el('clipPath', { id: 'a2-c' + i }, defs);
+    const r = el('rect', { x: TV.x - 200, width: TV.w + 400 }, cp);
+    const g = el('g', { 'clip-path': `url(#a2-c${i})` }, screen);
+    const off = el('g', {}, g);
+    const ch = ['r', 'g', 'b'].map(k => {
+      const cg = el('g', { filter: `url(#a2-${k})`, style: 'mix-blend-mode:screen' }, off);
+      const im = el('image', { x: TV.x, y: TV.y, width: TV.w, height: TV.h, preserveAspectRatio: 'xMidYMid slice', filter: 'url(#a2-vhs)' }, cg);
+      imgs.push(im);
+      return im;
+    });
+    slices.push({ r, off, ch, g });
+  }
+  const pat = el('pattern', { id: 'a2-scan', width: 4, height: 4, patternUnits: 'userSpaceOnUse' }, defs);
+  el('rect', { width: 4, height: 2, fill: '#000', opacity: .45 }, pat);
+  el('rect', { x: TV.x, y: TV.y, width: TV.w, height: TV.h, fill: 'url(#a2-scan)' }, screen);
+  const vg = el('radialGradient', { id: 'a2-vig', r: '75%' }, defs);
+  el('stop', { offset: '.6', 'stop-color': '#000', 'stop-opacity': 0 }, vg); el('stop', { offset: '1', 'stop-color': '#000', 'stop-opacity': .75 }, vg);
+  el('rect', { x: TV.x, y: TV.y, width: TV.w, height: TV.h, fill: 'url(#a2-vig)' }, screen);
+  const bar = el('rect', { x: TV.x, width: TV.w, height: 60, fill: '#fff', opacity: .06 }, screen);
+  const osd = el('text', { x: TV.x + 40, y: TV.y + 64, fill: '#fff', 'font-family': 'DejaVu Sans Mono', 'font-size': 30, opacity: .85 }, screen);
+  const osd2 = el('text', { x: TV.x + TV.w - 40, y: TV.y + TV.h - 40, 'text-anchor': 'end', fill: '#fff', 'font-family': 'DejaVu Sans Mono', 'font-size': 26, opacity: .75 }, screen);
+  const scrFlash = el('rect', { x: TV.x, y: TV.y, width: TV.w, height: TV.h, fill: '#fff', opacity: 0 }, screen);
+
+  // year counter
+  const lab = el('text', { x: 150, y: 420, fill: '#ED1C24', 'font-family': 'Oswald', 'font-size': 36, 'letter-spacing': 10 }, cam);
+  lab.textContent = 'TRAYECTORIA';
+  glow('a2-glow', 6, 1.2);
+  const year = el('text', { x: 140, y: 660, fill: '#F4DF06', 'font-family': 'Anton', 'font-size': 250, filter: 'url(#a2-glow)' }, cam);
+  const yearR = el('text', { x: 140, y: 660, fill: '#ED1C24', 'font-family': 'Anton', 'font-size': 250, opacity: 0, style: 'mix-blend-mode:screen' }, cam);
+  const tick = el('rect', { x: 150, y: 700, height: 6, fill: '#ED1C24' }, cam);
+
+  const hoyG = el('g', {}, root);
+  el('rect', { width: 1920, height: 1080, fill: '#000' }, hoyG);
+  const hoy = el('text', { x: 960, y: 640, 'text-anchor': 'middle', fill: '#F4DF06', 'font-family': 'Anton', 'font-size': 330, filter: 'url(#a2-glow)' }, hoyG);
+  hoy.textContent = 'HOY';
+  const flash = el('rect', { width: 1920, height: 1080, fill: '#fff', opacity: 0 }, root);
+  const fadeIn = el('rect', { width: 1920, height: 1080, fill: '#000' }, root);
+
+  return t => {
+    const on = t >= c.start && t < c.hoy[1] + .05;
+    show(root, on);
+    if (!on) return;
+    const clipIdx = Math.max(0, c.clips.findLastIndex(([, s]) => t >= s));
+    const inChaos = t >= c.chaos[0];
+    const [name, s0, yr, n] = inChaos ? c.clips[Math.floor(t * 7) % c.clips.length] : c.clips[clipIdx];
+    const yr0 = c.clips[clipIdx][2];
+    // clip frames are stretched to fill clipDur (short clips play in slow motion);
+    // in chaos we stutter through random clips
+    const local = inChaos ? (t - c.chaos[0]) * 1.7 % c.clipDur : t - s0;
+    const fr = clamp(Math.floor(local / c.clipDur * n) + 1, 1, n);
+    const url = `frames/${name}/${pad(fr)}.jpg`;
+    imgs.forEach(im => setImg(im, url));
+    // glitch intensity: spike at each clip change, ramps up in chaos
+    let I = 0;
+    for (const [, s] of c.clips) if (t >= s && t < s + .18) I = Math.max(I, 1 - (t - s) / .18);
+    if (inChaos) I = Math.max(I, .3 + .7 * prog(t, ...c.chaos));
+    const R = rng(Math.floor(t * 20) * 7919 + 3);
+    const cuts = [0]; for (let i = 1; i < N; i++) cuts.push(I > 0 ? i / N + (R() - .5) * .08 : i / N); cuts.push(1); cuts.sort((a, b) => a - b);
+    slices.forEach((s, i) => {
+      set(s.r, { y: TV.y + cuts[i] * TV.h, height: (cuts[i + 1] - cuts[i]) * TV.h + .5 });
+      s.off.setAttribute('transform', `translate(${I > 0 && R() < .6 * I ? (R() - .5) * 160 * I : 0} 0)`);
+      const sp = 2.5 + 16 * I * R();
+      s.ch[0].setAttribute('x', TV.x - sp); s.ch[2].setAttribute('x', TV.x + sp);
+      show(s.g, !(I > .7 && R() < .15));
+    });
+    set(turb, { seed: Math.floor(t * 30) % 97 + 1 });
+    noise.setAttribute('opacity', .05 + .2 * I);
+    set(bar, { y: TV.y + ((t * 260) % (TV.h + 120)) - 60, opacity: .05 + .1 * I });
+    osd.textContent = (Math.floor(t * 2) % 2 ? '▶ PLAY' : '▶ PLAY  ●');
+    const tc = t - c.start;
+    osd2.textContent = `SP  0:${String(Math.floor(tc / 60)).padStart(2, '0')}:${String(Math.floor(tc % 60)).padStart(2, '0')}`;
+    scrFlash.setAttribute('opacity', c.clips.reduce((a, [, s]) => Math.max(a, flashAt(t, s, .35, .12)), 0));
+    // year: rolls during glitch, random digits in chaos
+    const yTxt = inChaos && R() < .8 ? String(1990 + Math.floor(R() * 36)) : yr0;
+    year.textContent = yTxt; yearR.textContent = yTxt;
+    set(yearR, { x: 140 + 10 * I, opacity: I > 0 ? .8 : 0 });
+    tick.setAttribute('width', 60 + 500 * prog(t, c.clips[0][1], c.chaos[0]));
+    const [sx, sy] = inChaos ? [(R() - .5) * 26 * I, (R() - .5) * 14 * I] : [0, 0];
+    cam.setAttribute('transform', `translate(${sx} ${sy})`);
+    // HOY
+    const hp = t - c.lock;
+    show(hoyG, hp >= 0);
+    if (hp >= 0) {
+      const s = 1.6 - .6 * E.out(prog(hp, 0, .25));
+      hoy.setAttribute('transform', `translate(960 540) scale(${s}) translate(-960 -540)`);
+      hoyG.setAttribute('opacity', 1 - prog(t, c.hoy[1] - .35, c.hoy[1]));
+    }
+    flash.setAttribute('opacity', flashAt(t, c.lock, .6, .3));
+    fadeIn.setAttribute('opacity', 1 - prog(t, c.start, c.start + .35));
+  };
+})();
+
+// ======================================================================
+// ACT 3 — LA BANDA HOY: full-frame member cards, type slams on the beat
+// ======================================================================
+const A3 = (() => {
+  const c = D.a3;
+  const root = el('g', {}, svg);
+  const cam = el('g', {}, root);
+  const img = el('image', { x: 0, y: 0, width: 1920, height: 1080, preserveAspectRatio: 'xMidYMid slice' }, cam);
+  const gr = el('linearGradient', { id: 'a3-shade', x1: 0, x2: 1 }, defs);
+  el('stop', { offset: 0, 'stop-color': '#000', 'stop-opacity': .85 }, gr);
+  el('stop', { offset: .55, 'stop-color': '#000', 'stop-opacity': .15 }, gr);
+  el('stop', { offset: 1, 'stop-color': '#000', 'stop-opacity': .35 }, gr);
+  el('rect', { width: 1920, height: 1080, fill: 'url(#a3-shade)' }, root);
+  const pat = el('pattern', { id: 'a3-grain', width: 3, height: 3, patternUnits: 'userSpaceOnUse' }, defs);
+  el('rect', { width: 3, height: 1, fill: '#000', opacity: .18 }, pat);
+  el('rect', { width: 1920, height: 1080, fill: 'url(#a3-grain)' }, root);
+  const line = el('rect', { x: 140, y: 690, height: 8, fill: '#F4DF06' }, root);
+  const word = el('text', { x: 130, y: 640, fill: '#fff', 'font-family': 'Anton', 'font-size': 250, 'letter-spacing': 4 }, root);
+  const wordR = el('text', { x: 130, y: 640, fill: '#ED1C24', 'font-family': 'Anton', 'font-size': 250, 'letter-spacing': 4 }, root);
+  const nameT = el('text', { x: 144, y: 780, fill: '#F4DF06', 'font-family': 'Oswald', 'font-size': 60, 'letter-spacing': 6 }, root);
+  nameT.textContent = 'NOMBRE APELLIDO';
+  const flash = el('rect', { width: 1920, height: 1080, fill: '#fff', opacity: 0 }, root);
+  return t => {
+    const on = t >= c.cards[0][1] && t < c.cards[c.cards.length - 1][1] + c.cardDur;
+    show(root, on);
+    if (!on) return;
+    const [name, s0, label, n] = c.cards.findLast(([, s]) => t >= s);
+    const lt = t - s0;
+    const speed = n / 30 / c.cardDur;
+    setImg(img, `frames/${name}/${pad(clamp(Math.floor(lt * speed * 30) + 1, 1, n))}.jpg`);
+    const z = 1.04 + .08 * lt / c.cardDur;
+    const [sx, sy] = shake(t, s0, 14, .35);
+    cam.setAttribute('transform', `translate(${960 + sx} ${540 + sy}) scale(${z}) translate(-960 -540)`);
+    const pw = E.back(prog(lt, .05, .4));
+    word.textContent = wordR.textContent = label;
+    set(word, { x: 130 - 700 * (1 - pw), opacity: clamp(lt / .1) });
+    set(wordR, { x: 130 - 700 * (1 - pw) - 14 * (1 - prog(lt, .1, .5)), opacity: .9 * (1 - prog(lt, .1, .5)) });
+    line.setAttribute('width', 620 * E.out(prog(lt, .25, .7)));
+    set(nameT, { opacity: E.out(prog(lt, .4, .8)), x: 144 + 40 * (1 - E.out(prog(lt, .4, .8))) });
+    const out = prog(lt, c.cardDur - .15, c.cardDur);
+    root.setAttribute('opacity', 1);
+    flash.setAttribute('opacity', Math.max(flashAt(t, s0, .5, .2), out * .0));
+  };
+})();
+
+// ======================================================================
+// ACT 4 — CLIMAX: neon trace of the logo, ignition, big hit
+// ======================================================================
+const A4 = (() => {
+  const c = D.a4;
+  const root = el('g', {}, svg);
+  const rg = el('radialGradient', { id: 'a4-bg', r: '65%' }, defs);
+  el('stop', { offset: 0, 'stop-color': '#2a0d12' }, rg); el('stop', { offset: 1, 'stop-color': '#040306' }, rg);
+  el('rect', { width: 1920, height: 1080, fill: '#040306' }, root);
+  const vig = el('rect', { width: 1920, height: 1080, fill: 'url(#a4-bg)', opacity: 0 }, root);
+  const [vx, vy, vw, vh] = LOGO.viewBox.split(' ').map(Number);
+  const S = 1500 / vw, OX = (1920 - vw * S) / 2 - vx * S, OY = (1080 - vh * S) / 2 - vy * S;
+  glow('a4-gR', 3.5, 1.6);
+  const gY = glow('a4-gY', 6, 1);
+  const subs = d => d.split(/(?=M)/).filter(s => s.trim());
+  const mk = (id, layer, w) => {
+    const m = el('mask', { id, maskUnits: 'userSpaceOnUse', x: -100, y: -100, width: 1000, height: 600 }, defs);
+    el('rect', { x: -100, y: -100, width: 1000, height: 600, fill: '#000' }, m);
+    const out = [];
+    for (const p of LOGO.layers[layer]) for (const sp of subs(p.d))
+      out.push(el('path', { d: sp, fill: 'none', stroke: '#fff', 'stroke-width': w, 'stroke-linejoin': 'round', pathLength: 1, 'stroke-dasharray': '1 1' }, m));
+    return out;
+  };
+  const bandS = mk('a4-mb', 'band', 16), innerS = mk('a4-mi', 'inner', 14);
+  const ring = el('circle', { cx: 960, cy: 540, fill: 'none', stroke: '#F4DF06' }, root);
+  const cam = el('g', {}, root);
+  const logo = el('g', { transform: `translate(${OX} ${OY}) scale(${S})` }, cam);
+  const yellow = el('use', { href: '#L-outer', filter: 'url(#a4-gY)' }, logo);
+  el('g', { mask: 'url(#a4-mb)' }, logo).appendChild(el('use', { href: '#L-band', filter: 'url(#a4-gR)' }));
+  el('g', { mask: 'url(#a4-mi)' }, logo).appendChild(el('use', { href: '#L-inner', filter: 'url(#a4-gR)' }));
+  const R = rng(4242), sparks = [];
+  const sg = el('g', {}, root);
+  for (let i = 0; i < 80; i++) sparks.push({ a: R() * 6.283, v: 500 + R() * 1400, len: 10 + R() * 40, life: .5 + R() * .8,
+    n: el('line', { stroke: R() < .6 ? '#F4DF06' : '#ED1C24', 'stroke-width': 2 + R() * 3, 'stroke-linecap': 'round' }, sg) });
+  const flash = el('rect', { width: 1920, height: 1080, fill: '#fff6c0', opacity: 0 }, root);
+  const fade = el('rect', { width: 1920, height: 1080, fill: '#000', opacity: 0 }, root);
+  const draw = (arr, p) => arr.forEach(s => { s.setAttribute('stroke-dashoffset', 1 - p); s.style.display = p <= 0 ? 'none' : ''; });
+  return t => {
+    show(root, t >= c.start);
+    if (t < c.start) return;
+    draw(bandS, E.inOut(prog(t, ...c.band)));
+    draw(innerS, E.inOut(prog(t, ...c.inner)));
+    const on = c.flicker.some(([a, b]) => t >= a && t < b);
+    const b = t - c.boom;
+    yellow.setAttribute('opacity', on ? 1 : 0);
+    gY.setAttribute('slope', on ? 1.6 - .9 * E.out(prog(b, 0, 1.2)) + .08 * Math.sin(t * 9) : 0);
+    vig.setAttribute('opacity', b < 0 ? .4 * prog(t, c.start, c.boom) : .5 + .4 * (1 - E.out(prog(b, 0, 1.5))));
+    const punch = b >= 0 ? 1 + .07 * Math.exp(-b * 10) : 1;
+    const drift = 1 + .035 * E.out(prog(b, 0, c.end[0] - c.boom));
+    const [sx, sy] = shake(t, c.boom, 22, .6);
+    cam.setAttribute('transform', `translate(${960 + sx} ${540 + sy}) scale(${punch * drift}) translate(-960 -540)`);
+    const rp = prog(b, 0, .9);
+    set(ring, { r: 80 + 1300 * E.out(rp), 'stroke-width': 40 * (1 - rp), opacity: b >= 0 && rp < 1 ? 1 - rp : 0 });
+    sparks.forEach(s => {
+      const k = b / s.life;
+      if (b < 0 || k >= 1) return s.n.setAttribute('opacity', 0);
+      const d = s.v * (1 - Math.pow(1 - k, 2)) * s.life * .6 + 120;
+      const x = 960 + Math.cos(s.a) * d, y = 540 + Math.sin(s.a) * d + 260 * k * k;
+      set(s.n, { x1: x - Math.cos(s.a) * s.len, y1: y - Math.sin(s.a) * s.len, x2: x, y2: y, opacity: 1 - k });
+    });
+    flash.setAttribute('opacity', Math.max(flashAt(t, c.boom, .35, .3), on && b < 0 ? .05 : 0));
+    fade.setAttribute('opacity', Math.max(1 - prog(t, c.start, c.start + .3), prog(t, ...c.end)));
+  };
+})();
+
+// global watermark
+const wm = el('text', { x: 40, y: 1050, fill: '#fff', opacity: .45, 'font-family': 'Oswald', 'font-size': 22, 'letter-spacing': 3 }, svg);
+wm.textContent = 'DEMO DE PROPUESTA · MATERIAL, FECHAS Y NOMBRES PROVISIONALES';
+
+async function renderAt(t) {
+  pending.length = 0;
+  A1(t); A2(t); A3(t); A4(t);
+  await Promise.all(pending);
+}
+window.renderAt = renderAt;
+window.ready = document.fonts.ready;
+
+// preview player
+const audio = new Audio('audio/demo.wav');
+const scrub = document.getElementById('scrub'), tc = document.getElementById('tc'), btn = document.getElementById('play');
+scrub.max = D.dur;
+let playing = false;
+const loop = () => { if (!playing) return; const t = audio.currentTime; renderAt(t); scrub.value = t; tc.textContent = t.toFixed(2); requestAnimationFrame(loop); };
+btn.onclick = () => { if (playing) { playing = false; audio.pause(); btn.textContent = '▶'; return; }
+  if (audio.ended) audio.currentTime = 0; audio.play(); playing = true; btn.textContent = '❚❚'; loop(); };
+audio.onended = () => { playing = false; btn.textContent = '▶'; };
+scrub.oninput = () => { audio.currentTime = +scrub.value; renderAt(+scrub.value); tc.textContent = (+scrub.value).toFixed(2); };
+document.fonts.ready.then(() => renderAt(0));
+})();
+</script>
+</body>
+</html>

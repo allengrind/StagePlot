@@ -1,0 +1,31 @@
+{
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "styles": {
+    "neon": {
+      "title": "Neón — trazo + encendido",
+      "dur": 5.0,
+      "bandDraw": [0.10, 1.90],
+      "innerDraw": [0.55, 2.30],
+      "flicker": [[2.50, 2.54], [2.61, 2.64], [2.70, 99]],
+      "impact": 2.70
+    },
+    "glitch": {
+      "title": "Glitch VHS — señal que se estabiliza",
+      "dur": 5.0,
+      "start": 0.25,
+      "events": [0.30, 0.52, 0.78, 1.05, 1.22, 1.50, 1.68, 1.92],
+      "lock": 2.20,
+      "micro": 3.70
+    },
+    "impact": {
+      "title": "Impacto — ensamble por capas",
+      "dur": 5.0,
+      "hit1": 0.45,
+      "hit2": 1.15,
+      "wipe": [1.50, 1.90],
+      "boom": 2.25
+    }
+  }
+}

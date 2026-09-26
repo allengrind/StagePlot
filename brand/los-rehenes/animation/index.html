@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Los Rehenes — Animaciones</title>
+<style>
+  :root { --bg:#0b0a10; --panel:#16141d; --text:#f1efe8; --muted:#8d8a99; --accent:#F4DF06; }
+  html, body { margin:0; background:var(--bg); color:var(--text); font:14px/1.4 system-ui, sans-serif; }
+  .wrap { max-width:1100px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { font-size:18px; letter-spacing:.08em; text-transform:uppercase; margin:0 0 16px; }
+  .tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .tabs button, .ctrl button { background:var(--panel); color:var(--text); border:1px solid #2a2733;
+    border-radius:6px; padding:8px 14px; cursor:pointer; font:inherit; }
+  .tabs button[aria-pressed="true"] { border-color:var(--accent); color:var(--accent); }
+  .stage { position:relative; width:100%; aspect-ratio:16/9; background:#000; border-radius:8px; overflow:hidden; }
+  .stage svg { position:absolute; inset:0; width:100%; height:100%; }
+  .ctrl { display:flex; gap:10px; align-items:center; margin-top:12px; }
+  .ctrl input[type=range] { flex:1; accent-color:var(--accent); }
+  .ctrl span { font-variant-numeric:tabular-nums; color:var(--muted); min-width:4.5em; text-align:right; }
+  /* render mode: bare 1920x1080 canvas, no UI */
+  body.render .wrap { max-width:none; padding:0; }
+  body.render h1, body.render .tabs, body.render .ctrl { display:none; }
+  body.render .stage { width:1920px; height:1080px; aspect-ratio:auto; border-radius:0; }
+  html:has(body.alpha), body.render.alpha, body.render.alpha .stage { background:transparent; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Los Rehenes · animaciones de logo</h1>
+  <div class="tabs" id="tabs"></div>
+  <div class="stage"><svg id="svg" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  <div class="ctrl">
+    <button id="play">▶ Reproducir</button>
+    <input id="scrub" type="range" min="0" max="5" step="0.001" value="0">
+    <span id="time">0.00 s</span>
+  </div>
+</div>
+<script src="data.js"></script>
+<script>
+(() => {
+const NS = 'http://www.w3.org/2000/svg';
+const TL = window.TIMELINE, LOGO = window.LOGO;
+const svg = document.getElementById('svg');
+const params = new URLSearchParams(location.search);
+const RENDER = params.has('render');
+if (RENDER) document.body.classList.add('render');
+if (params.has('alpha')) document.body.classList.add('alpha');
+
+// ---------- helpers ----------
+const el = (tag, attrs = {}, parent) => {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+};
+const set = (n, attrs) => { for (const k in attrs) n.setAttribute(k, attrs[k]); };
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const ease = {
+  inOut: x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2,
+  out: x => 1 - Math.pow(1 - x, 3),
+  in: x => x * x * x,
+  back: x => { const c1 = 2.2, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); },
+};
+const rng = seed => () => {                       // mulberry32, deterministic per frame
+  seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+  let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+  return ((t ^ t >>> 14) >>> 0) / 4294967296;
+};
+// damped shake triggered at time t0
+const shake = (t, t0, amp, dur = .45, f = 38) => {
+  const x = t - t0;
+  if (x < 0 || x > dur) return [0, 0];
+  const d = amp * Math.pow(1 - x / dur, 2);
+  return [d * Math.sin(x * f * 6.283), d * Math.cos(x * f * 1.3 * 6.283 + 1.1)];
+};
+const subpaths = d => d.split(/(?=M)/).filter(s => s.trim());
+
+// Logo placement: logo units -> 1920x1080 frame
+const [vx, vy, vw, vh] = LOGO.viewBox.split(' ').map(Number);
+const S = 1500 / vw, OX = (1920 - vw * S) / 2 - vx * S, OY = (1080 - vh * S) / 2 - vy * S;
+const LOGO_T = `translate(${OX} ${OY}) scale(${S})`;
+const CX = vx + vw / 2, CY = vy + vh / 2;           // logo centre, logo units
+const aroundCentre = (s, dx = 0, dy = 0) => `translate(${CX + dx} ${CY + dy}) scale(${s}) translate(${-CX} ${-CY})`;
+
+const defs = el('defs', {}, svg);
+// reusable layer symbols
+for (const name of ['outer', 'band', 'inner']) {
+  const g = el('g', { id: 'L-' + name, fill: LOGO.layers[name][0].fill }, defs);
+  for (const p of LOGO.layers[name]) el('path', { d: p.d, 'fill-rule': p.rule }, g);
+}
+el('g', { id: 'L-all' }, defs).innerHTML =
+  '<use href="#L-outer"/><use href="#L-band"/><use href="#L-inner"/>';
+
+// glow filter (applied in logo units)
+const glow = (id, std, strength = 1) => {
+  const f = el('filter', { id, x: '-20%', y: '-40%', width: '140%', height: '180%' }, defs);
+  el('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: std, result: 'b' }, f);
+  const ct = el('feComponentTransfer', { in: 'b', result: 'bb' }, f);
+  el('feFuncA', { type: 'linear', slope: strength }, ct);
+  const m = el('feMerge', {}, f);
+  el('feMergeNode', { in: 'bb' }, m); el('feMergeNode', { in: 'SourceGraphic' }, m);
+  return f;
+};
+
+// ======================================================================
+// STYLE 1 — NEON: red tubes draw themselves on, yellow fill ignites with
+// a neon flicker, lands on an impact.
+// ======================================================================
+function buildNeon(root) {
+  const cfg = TL.styles.neon;
+  const bg = el('rect', { width: 1920, height: 1080, fill: '#07060b' }, root);
+  const rg = el('radialGradient', { id: 'n-vig', cx: '50%', cy: '50%', r: '65%' }, defs);
+  el('stop', { offset: '0', 'stop-color': '#2a0d12' }, rg);
+  el('stop', { offset: '1', 'stop-color': '#07060b' }, rg);
+  const vig = el('rect', { width: 1920, height: 1080, fill: 'url(#n-vig)', opacity: 0 }, root);
+
+  glow('n-glowR', 3.5, 1.6);
+  const glowY = glow('n-glowY', 6, 1);
+
+  const mkMask = (id, layer, width) => {
+    const m = el('mask', { id, maskUnits: 'userSpaceOnUse', x: -100, y: -100, width: 1000, height: 600 }, defs);
+    el('rect', { x: -100, y: -100, width: 1000, height: 600, fill: '#000' }, m);
+    const strokes = [];
+    for (const p of LOGO.layers[layer]) for (const sp of subpaths(p.d))
+      strokes.push(el('path', { d: sp, fill: 'none', stroke: '#fff', 'stroke-width': width,
+        'stroke-linecap': 'butt', 'stroke-linejoin': 'round', pathLength: 1, 'stroke-dasharray': '1 1' }, m));
+    return strokes;
+  };
+  const bandStrokes = mkMask('n-mBand', 'band', 16);
+  const innerStrokes = mkMask('n-mInner', 'inner', 14);
+
+  const cam = el('g', {}, root);
+  const logo = el('g', { transform: LOGO_T }, cam);
+  const yellow = el('use', { href: '#L-outer', filter: 'url(#n-glowY)', opacity: 0 }, logo);
+  const band = el('g', { mask: 'url(#n-mBand)' }, logo);
+  el('use', { href: '#L-band', filter: 'url(#n-glowR)' }, band);
+  const inner = el('g', { mask: 'url(#n-mInner)' }, logo);
+  el('use', { href: '#L-inner', filter: 'url(#n-glowR)' }, inner);
+  // bloom flash on ignition
+  const flash = el('rect', { width: 1920, height: 1080, fill: '#fff6c0', opacity: 0 }, root);
+
+  const draw = (strokes, p) => strokes.forEach(s => {
+    s.setAttribute('stroke-dashoffset', 1 - p);
+    s.style.display = p <= 0 ? 'none' : '';
+  });
+
+  return t => {
+    draw(bandStrokes, ease.inOut(prog(t, ...cfg.bandDraw)));
+    draw(innerStrokes, ease.inOut(prog(t, ...cfg.innerDraw)));
+    const on = cfg.flicker.some(([a, b]) => t >= a && t < b);
+    const settle = prog(t, cfg.impact, cfg.impact + 1.2);
+    yellow.setAttribute('opacity', on ? 1 : (t > cfg.flicker[0][0] && t < cfg.impact ? .08 : 0));
+    glowY.querySelector('feFuncA').setAttribute('slope', on ? 1.6 - .9 * ease.out(settle) + .08 * Math.sin(t * 9) : 0);
+    vig.setAttribute('opacity', t < cfg.impact ? .35 * prog(t, 0, 2) : .45 + .35 * (1 - ease.out(settle)));
+    flash.setAttribute('opacity', t >= cfg.impact ? .18 * Math.pow(1 - prog(t, cfg.impact, cfg.impact + .25), 2) : (on ? .06 : 0));
+    const [sx, sy] = shake(t, cfg.impact, 7, .5);
+    const push = 1 + .025 * ease.out(prog(t, cfg.impact, cfg.dur));
+    cam.setAttribute('transform', `translate(${960 + sx} ${540 + sy}) scale(${push}) translate(-960 -540)`);
+  };
+}
+
+// ======================================================================
+// STYLE 2 — GLITCH VHS: RGB-split, sliced, jittering signal that locks
+// into place on a sub drop.
+// ======================================================================
+function buildGlitch(root) {
+  const cfg = TL.styles.glitch;
+  el('rect', { width: 1920, height: 1080, fill: '#050507' }, root);
+  // channel filters (additive RGB via screen blending)
+  const chan = [['g-r', '1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0'],
+                ['g-g', '0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0'],
+                ['g-b', '0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0']];
+  for (const [id, m] of chan) {
+    const f = el('filter', { id, x: '-5%', y: '-5%', width: '110%', height: '110%' }, defs);
+    el('feColorMatrix', { type: 'matrix', values: m }, f);
+  }
+  // static noise
+  const nf = el('filter', { id: 'g-noise', x: 0, y: 0, width: '100%', height: '100%' }, defs);
+  const turb = el('feTurbulence', { type: 'fractalNoise', baseFrequency: '0.9 0.02', numOctaves: 1, seed: 1 }, nf);
+  el('feColorMatrix', { type: 'saturate', values: 0 }, nf);
+  const noise = el('rect', { width: 1920, height: 1080, filter: 'url(#g-noise)', opacity: 0 }, root);
+
+  const N = 12;                                        // horizontal slices
+  const logo = el('g', { transform: LOGO_T }, root);
+  const slices = [];
+  for (let i = 0; i < N; i++) {
+    const cp = el('clipPath', { id: 'g-c' + i }, defs);
+    const r = el('rect', { x: -200, width: 1200 }, cp);
+    const g = el('g', { 'clip-path': `url(#g-c${i})` }, logo);
+    const off = el('g', {}, g);
+    const ch = ['g-r', 'g-g', 'g-b'].map(id =>
+      el('use', { href: '#L-all', filter: `url(#${id})`, style: 'mix-blend-mode:screen' }, off));
+    slices.push({ r, off, ch, g });
+  }
+  // scanlines + tracking bar
+  const pat = el('pattern', { id: 'g-scan', width: 4, height: 4, patternUnits: 'userSpaceOnUse' }, defs);
+  el('rect', { width: 4, height: 2, fill: '#000' }, pat);
+  const scan = el('rect', { width: 1920, height: 1080, fill: 'url(#g-scan)' }, root);
+  const bar = el('rect', { width: 1920, height: 90, fill: '#fff', opacity: 0 }, root);
+  const flash = el('rect', { width: 1920, height: 1080, fill: '#fff', opacity: 0 }, root);
+
+  const top = vy - 10, h = vh + 20;
+  return t => {
+    // intensity: spikes at events, decays toward lock, micro-glitch after
+    let I = 0;
+    if (t >= cfg.start && t < cfg.lock) {
+      I = .35 + .45 * (1 - prog(t, cfg.start, cfg.lock));
+      for (const e of cfg.events) if (t >= e && t < e + .09) I = 1;
+    }
+    if (t >= cfg.micro && t < cfg.micro + .1) I = .45;
+    const visible = t >= cfg.start;
+    const frame = Math.floor(t * 20);                  // glitch updates at 20 Hz (choppy on purpose)
+    const R = rng(frame * 7919 + 13);
+    // random slice boundaries
+    const cuts = [0];
+    for (let i = 1; i < N; i++) cuts.push(I > 0 ? (i / N + (R() - .5) * .08) : i / N);
+    cuts.push(1); cuts.sort((a, b) => a - b);
+    slices.forEach((s, i) => {
+      set(s.r, { y: top + cuts[i] * h, height: (cuts[i + 1] - cuts[i]) * h + .5 });
+      const jump = I > 0 && R() < .55 * I ? (R() - .5) * 140 * I : 0;
+      s.off.setAttribute('transform', `translate(${jump} 0)`);
+      const split = I > 0 ? 3 + 14 * I * R() : (t >= cfg.lock ? 1.2 : 0);
+      s.ch[0].setAttribute('x', -split); s.ch[2].setAttribute('x', split);
+      s.ch[1].setAttribute('y', I > 0 ? (R() - .5) * 4 * I : 0);
+      s.g.style.display = !visible || (I > .6 && R() < .15) ? 'none' : '';
+    });
+    const lockFlash = t >= cfg.lock ? Math.pow(1 - prog(t, cfg.lock, cfg.lock + .25), 2) : 0;
+    logo.setAttribute('opacity', visible ? (I > 0 ? .75 + .25 * R() : 1) : 0);
+    set(turb, { seed: frame % 97 + 1 });
+    noise.setAttribute('opacity', t < cfg.start ? .3 : (t < cfg.lock ? .08 + .18 * I : (I > 0 ? .12 : .03)));
+    scan.setAttribute('opacity', t < cfg.lock ? .35 : .18);
+    set(bar, { y: ((t * 700) % 1300) - 150, opacity: t < cfg.lock ? .05 + .06 * I : .025 });
+    flash.setAttribute('opacity', .4 * lockFlash);
+  };
+}
+
+// ======================================================================
+// STYLE 3 — IMPACT: layers slam in one by one (silhouette, contour,
+// inner line wipe) and close on a big hit with shockwave + sparks.
+// ======================================================================
+function buildImpact(root) {
+  const cfg = TL.styles.impact;
+  const rg = el('radialGradient', { id: 'i-bg', cx: '50%', cy: '50%', r: '70%' }, defs);
+  el('stop', { offset: '0', 'stop-color': '#1b1420' }, rg);
+  el('stop', { offset: '1', 'stop-color': '#060508' }, rg);
+  el('rect', { width: 1920, height: 1080, fill: 'url(#i-bg)' }, root);
+
+  const ring = el('circle', { cx: 960, cy: 540, r: 0, fill: 'none', stroke: '#F4DF06' }, root);
+  const ring2 = el('circle', { cx: 960, cy: 540, r: 0, fill: 'none', stroke: '#ED1C24' }, root);
+  const cam = el('g', {}, root);
+  const logo = el('g', { transform: LOGO_T }, cam);
+  const outer = el('g', {}, logo); el('use', { href: '#L-outer' }, outer);
+  const band = el('g', {}, logo); el('use', { href: '#L-band' }, band);
+  const cp = el('clipPath', { id: 'i-wipe' }, defs);
+  const wipeR = el('rect', { x: vx - 20, y: vy - 20, height: vh + 40, width: 0 }, cp);
+  const inner = el('g', { 'clip-path': 'url(#i-wipe)' }, logo); el('use', { href: '#L-inner' }, inner);
+  const edgeF = el('filter', { id: 'i-edge', x: '-200%', y: '-10%', width: '500%', height: '120%' }, defs);
+  el('feGaussianBlur', { stdDeviation: '4 0' }, edgeF);
+  const edge = el('rect', { y: vy - 10, height: vh + 20, width: 6, fill: '#fff', filter: 'url(#i-edge)', opacity: 0 }, logo);
+
+  // sparks
+  const R = rng(4242), sparks = [];
+  const sg = el('g', {}, root);
+  for (let i = 0; i < 70; i++) {
+    const a = R() * Math.PI * 2, v = 500 + R() * 1300;
+    sparks.push({ a, v, len: 10 + R() * 40, life: .5 + R() * .7,
+      n: el('line', { stroke: R() < .6 ? '#F4DF06' : '#ED1C24', 'stroke-width': 2 + R() * 3, 'stroke-linecap': 'round' }, sg) });
+  }
+  const flash = el('rect', { width: 1920, height: 1080, fill: '#fff', opacity: 0 }, root);
+
+  return t => {
+    // 1) silhouette pops in with overshoot
+    const p1 = prog(t, cfg.hit1 - .38, cfg.hit1);
+    const s1 = t < cfg.hit1 ? .15 + .85 * ease.in(p1) : 1 + .06 * Math.sin((t - cfg.hit1) * 22) * Math.exp(-(t - cfg.hit1) * 9);
+    outer.setAttribute('transform', aroundCentre(s1));
+    outer.setAttribute('opacity', p1 > 0 ? clamp(p1 * 3) : 0);
+    // 2) contour slams down from large scale
+    const p2 = prog(t, cfg.hit2 - .3, cfg.hit2);
+    band.setAttribute('transform', aroundCentre(1 + 1.2 * (1 - ease.in(p2))));
+    band.setAttribute('opacity', p2 > 0 ? ease.out(p2) : 0);
+    // 3) inner line wipes left -> right
+    const p3 = ease.inOut(prog(t, ...cfg.wipe));
+    const wx = vx - 20 + (vw + 40) * p3;
+    wipeR.setAttribute('width', (vw + 40) * p3);
+    set(edge, { x: wx - 3, opacity: p3 > 0 && p3 < 1 ? 1 : 0 });
+    // 4) final boom: punch, flash, shockwave, sparks
+    const b = t - cfg.boom;
+    const punch = b >= 0 ? 1 + .08 * Math.exp(-b * 10) : 1;
+    const drift = 1 + .03 * ease.out(prog(t, cfg.boom, cfg.dur));
+    const sh = [cfg.hit1, cfg.hit2, cfg.boom].map((h, i) => shake(t, h, [6, 10, 22][i], [.3, .35, .6][i]))
+      .reduce((a, c) => [a[0] + c[0], a[1] + c[1]], [0, 0]);
+    cam.setAttribute('transform', `translate(${960 + sh[0]} ${540 + sh[1]}) scale(${punch * drift}) translate(-960 -540)`);
+    const rp = prog(b, 0, .9), rp2 = prog(b, .08, 1.1);
+    set(ring, { r: 80 + 1300 * ease.out(rp), 'stroke-width': 40 * (1 - rp), opacity: b >= 0 && rp < 1 ? 1 - rp : 0 });
+    set(ring2, { r: 60 + 1100 * ease.out(rp2), 'stroke-width': 24 * (1 - rp2), opacity: b >= .08 && rp2 < 1 ? .8 * (1 - rp2) : 0 });
+    sparks.forEach(s => {
+      const k = b / s.life;
+      if (b < 0 || k >= 1) { s.n.setAttribute('opacity', 0); return; }
+      const d = s.v * (1 - Math.pow(1 - k, 2)) * s.life * .6 + 120;
+      const x = 960 + Math.cos(s.a) * d, y = 540 + Math.sin(s.a) * d + 260 * k * k;
+      const tx = Math.cos(s.a) * s.len, ty = Math.sin(s.a) * s.len;
+      set(s.n, { x1: x - tx, y1: y - ty, x2: x, y2: y, opacity: 1 - k });
+    });
+    const hitFlash = [[cfg.hit1, .12], [cfg.hit2, .18], [cfg.boom, .4]]
+      .reduce((a, [h, amt]) => Math.max(a, t >= h ? amt * Math.pow(1 - prog(t, h, h + .22), 2) : 0), 0);
+    flash.setAttribute('opacity', hitFlash);
+  };
+}
+
+// ---------- scene switching / playback ----------
+const BUILDERS = { neon: buildNeon, glitch: buildGlitch, impact: buildImpact };
+const scenes = {};
+for (const key in BUILDERS) {
+  const root = el('g', { id: 's-' + key, display: 'none' }, svg);
+  scenes[key] = { root, render: BUILDERS[key](root) };
+}
+if (params.has('alpha')) svg.querySelectorAll('g[id^="s-"] > rect:first-child').forEach(r => r.remove());
+
+let current = null, audio = null, playing = false;
+const scrub = document.getElementById('scrub'), timeEl = document.getElementById('time'), playBtn = document.getElementById('play');
+function renderAt(key, t) {
+  if (current !== key) {
+    for (const k in scenes) scenes[k].root.setAttribute('display', k === key ? 'inline' : 'none');
+    current = key;
+  }
+  scenes[key].render(t);
+}
+window.renderAt = renderAt;                         // used by tools/render.js
+
+function select(key) {
+  stop();
+  audio = new Audio(`audio/${key}.wav`);
+  audio.addEventListener('ended', stop);
+  scrub.max = TL.styles[key].dur;
+  scrub.value = 0;
+  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.key === key));
+  renderAt(key, 0); timeEl.textContent = '0.00 s';
+}
+function stop() { playing = false; playBtn.textContent = '▶ Reproducir'; if (audio) audio.pause(); }
+function loop() {
+  if (!playing) return;
+  const t = audio.currentTime;                      // audio clock drives the picture
+  renderAt(current, t); scrub.value = t; timeEl.textContent = t.toFixed(2) + ' s';
+  requestAnimationFrame(loop);
+}
+playBtn.onclick = () => {
+  if (playing) return stop();
+  if (audio.ended || audio.currentTime >= TL.styles[current].dur - .01) audio.currentTime = 0;
+  audio.play(); playing = true; playBtn.textContent = '❚❚ Pausa'; loop();
+};
+scrub.oninput = () => { const t = +scrub.value; if (audio) audio.currentTime = t; renderAt(current, t); timeEl.textContent = t.toFixed(2) + ' s'; };
+
+const tabs = document.getElementById('tabs');
+for (const key in TL.styles) {
+  const b = document.createElement('button');
+  b.textContent = TL.styles[key].title; b.dataset.key = key; b.onclick = () => select(key);
+  tabs.appendChild(b);
+}
+if (!RENDER) select(params.get('style') || 'neon');
+})();
+</script>
+</body>
+</html>

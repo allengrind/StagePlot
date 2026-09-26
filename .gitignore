@@ -10,3 +10,13 @@ Thumbs.db
 
 # Project scratch
 scraps/
+
+# Heavy intermediate renders (regenerate with brand/los-rehenes/tools/render.js --alpha)
+*.mov
+
+# Intro demo placeholder footage (derived from the old intro; regenerate with tools/demo_frames.py)
+brand/los-rehenes/intro-demo/frames/
+__pycache__/
+
+# Band audio in progress (regenerate with brand/los-rehenes/tools/animatic_cues.py)
+brand/los-rehenes/intro-demo/audio/presentacion.wav
